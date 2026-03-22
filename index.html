@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="am">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="theme-color" content="#004d40">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Elite Inspection">
+    <link rel="manifest" href="manifest.json">
+    <title>SYSTEM ELITE v76.0 - አጥንክሮ የተሰራ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #004d40;
+            --secondary: #00796b;
+            --accent: #ffb300;
+            --danger: #ff1744;
+            --success: #00c853;
+            --info: #0288d1;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --glass: rgba(255, 255, 255, 0.95);
+            --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --emergency: #ff0000;
+            --duplicate: #2196F3;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Nyala', 'Roboto', sans-serif;
+            background: #eef2f7;
+            margin: 0;
+            color: var(--dark);
+            overflow-x: hidden;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 200, 83, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0);
+            }
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 23, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 23, 68, 0);
+            }
+        }
+
+        @keyframes emergencyBlink {
+
+            0%,
+            100% {
+                background: #ff0000;
+                color: white;
+            }
+
+            50% {
+                background: #ff6600;
+                color: white;
+            }
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .online {
+            background: #e8f5e9;
+            color: var(--success);
+            border: 1px solid var(--success);
+            animation: pulse-green 2s infinite;
+        }
+
+        .offline {
+            background: #ffebee;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            animation: pulse-red 2s infinite;
+        }
+
+        .emergency-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 900;
+            animation: emergencyBlink 0.8s infinite;
+        }
+
+        .duplicate-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 900;
+            background: var(--duplicate);
+            color: white;
+        }
+
+        .emergency-row {
+            animation: emergencyGlow 1.5s infinite;
+            background: #fff0f0 !important;
+        }
+
+        .duplicate-row {
+            background: #e3f2fd !important;
+            border-left: 4px solid var(--duplicate);
+        }
+
+        @keyframes emergencyGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 5px #ff0000;
+            }
+
+            50% {
+                box-shadow: 0 0 20px #ff0000;
+            }
+        }
+
+        #loginArea {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top right, #00796b, #004d40);
+        }
+
+        .login-card {
+            background: var(--glass);
+            padding: 40px 30px;
+            border-radius: 35px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #94a3b8;
+            background: none;
+            border: none;
+            padding: 5px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: var(--transition);
+            background: white;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--secondary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(155, 230, 222, 0.1);
+        }
+
+        .btn-action {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+
+        .container {
+            display: none;
+            padding: 0px;
+            max-width: 1600px;
+            margin: auto;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .header-card {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropbtn {
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: #ffffff;
+            min-width: 280px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            border-radius: 0 0 18px 18px;
+            padding: 15px;
+            z-index: 9999;
+            border: 1px solid #e2e8f0;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .dropdown-content button {
+            width: 100%;
+            text-align: left;
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .dropdown-content button:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 15px;
+            color: #475569;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-box {
+            padding: 25px;
+            border-radius: 22px;
+            background: white;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+            border-bottom: 6px solid transparent;
+        }
+
+        .stat-val {
+            display: block;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 10px;
+        }
+
+        .stat-lbl {
+            color: #64748b;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background: #333;
+            color: white;
+            text-align: center;
+            border-radius: 12px;
+            padding: 16px;
+            position: fixed;
+            z-index: 10000;
+            bottom: 30px;
+            right: 30px;
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .admin-section {
+            border: 1px dashed #cbd5e1;
+            padding: 10px;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .restricted {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(1);
+        }
+
+        .lang-btn {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #binDisplay,
+        #emergencyDisplay,
+        #duplicateDisplay {
+            display: none;
+            background: #fff;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .eth-date-picker {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .eth-date-picker select,
+        .eth-date-picker input {
+            width: auto;
+            min-width: 60px;
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .calendar-toggle {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .calendar-toggle button {
+            padding: 4px 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .calendar-toggle button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .date-range-filter {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .date-range-filter input {
+            width: 130px;
+            padding: 8px;
+        }
+
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e2e8f0;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .install-btn {
+            position: fixed;
+            bottom: 100px;
+            left: 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1100;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media (max-width: 550px) {
+            .grid-4 {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .btn-action {
+                padding: 10px 16px;
+                font-size: 12px;
+            }
+
+            .header-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .stat-val {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast">✅ መልዕክት</div>
+    <div id="loadingOverlay">
+        <div class="loader-box" style="background:white; padding:40px; border-radius:20px;">
+            <div class="spinner"></div>
+            <h3>እየተከናወነ ነው...</h3>
+        </div>
+    </div>
+
+    <button id="installBtn" class="install-btn" style="display: none;"><i class="fas fa-download"></i> Install App / አፕ
+        ጫን</button>
+
+    <div id="loginArea">
+        <div class="login-card">
+            <i class="fas fa-shield-halved fa-4x" style="color: var(--primary); margin-bottom: 20px;"></i>
+            <h1 style="margin: 0; color: var(--primary); font-size: 22px;">በአብክመ መትሎባ የወ/ጠ/ሰ/ሁ/ዞን ኢንስፔክሽን ስራ ሂደት</h1>
+            <p id="L_subtitle" style="color: #64748b; margin-bottom: 30px;">የቴክኒክ ምርመራ አስተዳደር ሲስተም (አጥንክሮ የተሰራ)</p>
+            <div class="input-group"><input type="text" id="u" placeholder="የተጠቃሚ ስም / Username" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <input type="password" id="p" placeholder="የምስጢር ቃል / Password" autocomplete="off">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility()"><i class="fas fa-eye"
+                        id="pwToggleIcon"></i></button>
+            </div>
+            <button class="btn-action" onclick="login()"
+                style="background: var(--primary); color: white; width: 100%; font-size: 17px;"><span
+                    id="L_loginBtn">ሲስተም ግባ</span> <i class="fas fa-sign-in-alt"></i></button>
+            <div style="margin-top: 20px;"><button class="lang-btn" onclick="toggleLang('am')">አማርኛ</button><button
+                    class="lang-btn" onclick="toggleLang('en')">English</button></div>
+        </div>
+    </div>
+
+    <div id="mainApp" class="container">
+        <div class="header-card">
+            <div>
+                <h2 style="margin:0; font-size: 20px;"><i class="fas fa-car-side"></i> Elite Inspection Pro v76.0</h2>
+                <div style="display:flex; gap:12px; margin-top:8px; flex-wrap:wrap;">
+                    <div id="netStatus" class="status-indicator online"><i class="fas fa-circle"></i> <span
+                            id="netText">ኦንላይን</span></div>
+                    <span id="userBadge"
+                        style="background:#f1f5f9; padding:6px 14px; border-radius:10px; font-weight:700; font-size:12px;"></span>
+                    <span id="emergencyCount"
+                        style="display:none; background:#ff0000; color:white; padding:4px 12px; border-radius:10px; font-weight:800; font-size:12px;">⚠️
+                        ኢመርጀንሲ: <span id="emergencyNum">0</span></span>
+                    <span id="duplicateCount"
+                        style="display:none; background:#2196F3; color:white; padding:4px 12px; border-radius:10px; font-weight:800; font-size:12px;">🔷
+                        ዱፕሊኬት: <span id="duplicateNum">0</span></span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button class="lang-btn" onclick="toggleLang('am')">AM</button>
+                <button class="lang-btn" onclick="toggleLang('en')">EN</button>
+                <div class="dropdown">
+                    <button class="dropbtn"><span id="D_allTasks">አጠቃላይ ተግባራት</span> <i
+                            class="fas fa-chevron-down"></i></button>
+                    <div class="dropdown-content">
+                        <button onclick="fetchFromCloud()"><i class="fas fa-cloud-download-alt"></i> <span
+                                id="D_fetch">ከክላውድ ዳታ አውርድ</span></button>
+                        <button onclick="syncAllToCloud()"><i class="fas fa-cloud-upload-alt"></i> <span
+                                id="D_sync">ሁሉንም ወደ ክላውድ ላክ</span></button>
+                        <hr>
+                        <button onclick="toggleEmergencyList()"><i class="fas fa-exclamation-triangle"></i> <span
+                                id="D_emergency">ኢመርጀንሲ ተሽከርካሪዎች</span> (<span
+                                id="emergencyMenuCount">0</span>)</button>
+                        <button onclick="toggleDuplicateList()"><i class="fas fa-copy"></i> 🔷 ዱፕሊኬት ተሽከርካሪዎች</button>
+                        <hr>
+                        <div class="admin-section admin-only">
+                            <button onclick="document.getElementById('xlFile').click()"><i
+                                    class="fas fa-file-import"></i> <span id="D_import">ኤክሴል አስገባ</span></button>
+                            <button onclick="exportExcel()"><i class="fas fa-file-export"></i> <span id="D_export">ኤክሴል
+                                    አውርድ</span></button>
+                            <button onclick="localBackup()"><i class="fas fa-hdd"></i> <span id="D_backup">ሎካል
+                                    ባካፕ</span></button>
+                            <button onclick="showExcelReportDialog()"><i class="fas fa-file-excel"></i> 📊 ኤክሴል
+                                ሪፖርት</button>
+                            <button onclick="showEmailDialog()"><i class="fas fa-envelope"></i> <span id="D_email">ኢሜይል
+                                    ላክ</span></button>
+                            <hr>
+                            <div style="padding:10px; background:#fff5f5; border-radius:10px;">
+                                <label style="color:red; font-size:11px; font-weight:bold;">የጅምላ ማጥፊያ</label>
+                                <div style="display:flex; gap:5px; margin-top:5px;"><input type="number" id="bFrom"
+                                        placeholder="ከ" style="padding:8px;"><input type="number" id="bTo"
+                                        placeholder="እስከ" style="padding:8px;"></div>
+                                <button onclick="bulkDelete()"
+                                    style="background:red; color:white; border:none; width:100%; margin-top:8px; border-radius:8px; padding:10px; cursor:pointer; font-weight:bold;">በጅምላ
+                                    አጥፋ</button>
+                            </div>
+                            <button onclick="toggleBin()"><i class="fas fa-recycle"></i> <span id="D_bin">ሪሳይክል
+                                    ቢን</span> (<span id="binCnt">0</span>)</button>
+                            <button onclick="showLoginLogs()"><i class="fas fa-history"></i> <span id="D_logs">የግባት
+                                    ሎግ</span></button>
+                            <button onclick="showChangePasswordDialog()"><i class="fas fa-key"></i> <span
+                                    id="D_changePwd">የይለፍ ቃል ለውጥ</span></button>
+                            <button onclick="removeDuplicates()"><i class="fas fa-copy"></i> 🔥 ተደጋጋሚዎችን አስወግድ</button>
+                            <button onclick="findDuplicates()"><i class="fas fa-search"></i> 🔍 ዱፕሊኬቶችን ፈልግ</button>
+                        </div>
+                        <hr>
+                        <button onclick="logout()"><i class="fas fa-power-off"></i> <span id="D_logout">ሲስተሙን
+                                ዝጋ</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="emergencyDisplay">
+            <div style="display:flex; justify-content:space-between;">
+                <h3><i class="fas fa-exclamation-triangle"></i> ⚠️ ኢመርጀንሲ ተሽከርካሪዎች</h3><button
+                    onclick="toggleEmergencyList()" style="font-size:24px;">&times;</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr style="background:#ff0000;">
+                            <th style="color:white;">ሰሌዳ</th>
+                            <th style="color:white;">የችግር ብዛት</th>
+                            <th style="color:white;">ቀን</th>
+                            <th style="color:white;">ቦታ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="emergencyItems"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="duplicateDisplay">
+            <div style="display:flex; justify-content:space-between;">
+                <h3><i class="fas fa-copy"></i> 🔷 ዱፕሊኬት ተሽከርካሪዎች</h3><button onclick="toggleDuplicateList()"
+                    style="font-size:24px;">&times;</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr style="background:#2196F3;">
+                            <th style="color:white;">ሰሌዳ</th>
+                            <th style="color:white;">ቀን</th>
+                            <th style="color:white;">ድግግሞሽ</th>
+                            <th style="color:white;">ቦታዎች</th>
+                        </tr>
+                    </thead>
+                    <tbody id="duplicateItems"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="binDisplay">
+            <div style="display:flex; justify-content:space-between;">
+                <h3><i class="fas fa-recycle"></i> ሪሳይክል ቢን</h3><button onclick="toggleBin()"
+                    style="font-size:24px;">&times;</button>
+            </div>
+            <div style="margin-bottom:15px;"><button onclick="bulkRestore()" class="btn-action"
+                    style="background:var(--success); color:white;"><i class="fas fa-undo"></i> ሁሉንም መልስ</button><button
+                    onclick="emptyBin()" class="btn-action" style="background:var(--danger); color:white;"><i
+                        class="fas fa-trash-alt"></i> ቢኑን ባዶ አድርግ</button></div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ሰሌዳ</th>
+                            <th>ደረሰኝ</th>
+                            <th>እርምጃ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="binItems"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="card grid-4">
+            <input type="text" id="sPlate" placeholder="በሰሌዳ ፈልግ..." oninput="refresh()">
+            <input type="text" id="sReceipt" placeholder="በደረሰኝ ፈልግ..." oninput="refresh()">
+            <select id="sLoc" onchange="refresh()">
+                <option value="" id="O_allLoc">ሁሉም ቦታ</option>
+                <option>ወልቃይት</option>
+                <option>ዳንሻ</option>
+                <option>ጠገዴ</option>
+                <option>ሰቲት</option>
+                <option>ዞን</option>
+            </select>
+            <select id="sStatus" onchange="refresh()">
+                <option value="">ሁሉንም ውጤት</option>
+                <option value="ችግር የለበትም">ችግር የለበትም</option>
+                <option value="ችግር ያለበት">ችግር ያለበት</option>
+            </select>
+        </div>
+
+        <div class="card">
+            <div class="date-range-filter">
+                <label><i class="fas fa-calendar-alt"></i> ከቀን:</label>
+                <input type="text" id="sDateFrom" placeholder="DD/MM/YYYY" oninput="refresh()">
+                <label>እስከ:</label>
+                <input type="text" id="sDateTo" placeholder="DD/MM/YYYY" oninput="refresh()">
+                <button onclick="clearDateFilter()" class="btn-action"
+                    style="background:#e2e8f0; color:#475569; padding:8px 15px;"><i class="fas fa-times"></i>
+                    ያጥፉ</button>
+            </div>
+        </div>
+
+        <!-- Input Form -->
+        <div id="inputFormCard" class="card grid-4" style="background: #f8fafc;">
+            <input id="receipt" placeholder="ደረሰኝ ቁ.">
+            <input id="plate" placeholder="ሰሌዳ / Plate">
+            <input id="vType" placeholder="የተሽከርካሪ ዓይነት">
+            <div>
+                <div class="calendar-toggle"><button onclick="setInputCalendar('eth')" class="active"
+                        id="inpCalEth">ኢ.ቀን</button><button onclick="setInputCalendar('greg')"
+                        id="inpCalGreg">Greg</button></div>
+                <div id="inputEthPicker">
+                    <div class="eth-date-picker"><select id="ethDay" onchange="updateEthDate()"></select><select
+                            id="ethMonth" onchange="updateEthDateDays()"></select><input type="number" id="ethYear"
+                            placeholder="ዓ.ም" style="width:80px;" value="2017" onchange="updateEthDate()"></div>
+                </div>
+                <div id="inputGregPicker" style="display:none;"><input id="gregDate" type="date"
+                        onchange="updateGregDate()"></div>
+                <input id="pDate" type="hidden">
+                <small id="datePreview" style="color:var(--secondary); font-weight:bold;"></small>
+            </div>
+            <select id="loc">
+                <option value="" id="O_selLoc">ቦታ ምረጥ</option>
+                <option>ሰቲት</option>
+                <option>ወልቃይት</option>
+                <option>ዳንሻ</option>
+                <option>ጠገዴ</option>
+                <option>ዞን</option>
+            </select>
+            <select id="status">
+                <option value="ችግር የለበትም">ችግር የለበትም (Pass)</option>
+                <option value="ችግር ያለበት">ችግር ያለበት (Fail)</option>
+            </select>
+            <input id="amt" type="number" placeholder="የክፍያ መጠን (ብር)">
+            <div style="display: flex; gap: 10px;"><button id="saveBtn" onclick="save()"
+                    style="background:var(--primary); color:white; flex:1;" class="btn-action"><i
+                        class="fas fa-save"></i> Local</button><button onclick="syncAllToCloud()"
+                    style="background:var(--success); color:white; flex:1;" class="btn-action"><i
+                        class="fas fa-cloud-upload-alt"></i> Cloud</button></div>
+        </div>
+
+        <div class="card table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th id="TH_id">ተ.ቁ</th>
+                        <th id="TH_rec">ደረሰኝ</th>
+                        <th id="TH_plate">ሰሌዳ</th>
+                        <th id="TH_type">ዓይነት</th>
+                        <th id="TH_date">ቀን</th>
+                        <th id="TH_loc">ቦታ</th>
+                        <th id="TH_res">ምርመራ</th>
+                        <th id="TH_amt">ብር</th>
+                        <th id="TH_act">እርምጃ</th>
+                    </tr>
+                </thead>
+                <tbody id="mainTable"></tbody>
+            </table>
+        </div>
+
+        <div class="grid-4">
+            <div class="stat-box"><span class="stat-lbl" id="ST_total">ጠቅላላ ተሽከርካሪ</span><span id="uiCount"
+                    class="stat-val">0</span></div>
+            <div class="stat-box"><span class="stat-lbl" id="ST_income">ጠቅላላ ገቢ (ብር)</span><span id="uiSum"
+                    class="stat-val">0</span></div>
+            <div class="stat-box"><span class="stat-lbl" id="ST_passed">ችግር የለለበት</span><span id="uiPassed"
+                    class="stat-val">0</span></div>
+            <div class="stat-box"><span class="stat-lbl" id="ST_failed">ችግር ያለበት</span><span id="uiFailed"
+                    class="stat-val">0</span></div>
+        </div>
+
+        <input type="file" id="xlFile" hidden onchange="importExcel(event)">
+    </div>
+
+    <!-- Dialogs -->
+    <div id="excelReportDialog"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:20000;">
+        <div style="background:white; max-width:400px; margin:80px auto; padding:30px; border-radius:20px;">
+            <h2><i class="fas fa-file-excel"></i> ኤክሴል ሪፖርት</h2><select id="excelReportType"
+                style="width:100%; padding:12px;">
+                <option value="day">በቀን</option>
+                <option value="month">በወር</option>
+                <option value="year">በዓመት</option>
+                <option value="all">ሁሉንም</option>
+            </select>
+            <div>
+                <div class="calendar-toggle"><button onclick="setExcelCalendar('eth')" class="active"
+                        id="excCalEth">ኢትዮጵያ</button><button onclick="setExcelCalendar('greg')"
+                        id="excCalGreg">Gregorian</button></div>
+                <div id="excEthPicker">
+                    <div class="eth-date-picker"><select id="excEthDay"></select><select
+                            id="excEthMonth"></select><input type="number" id="excEthYear" placeholder="ዓ.ም"
+                            value="2017"></div>
+                </div>
+                <div id="excGregPicker" style="display:none;"><input type="date" id="excelReportDate"></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;"><button onclick="generateExcelReport()"
+                    class="btn-action" style="background:var(--success); color:white;">ኤክሴል አውርድ</button><button
+                    onclick="closeDialog('excelReportDialog')" class="btn-action"
+                    style="background:var(--danger); color:white;">ዝጋ</button></div>
+        </div>
+    </div>
+
+    <div id="emailDialog"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:20000;">
+        <div style="background:white; max-width:400px; margin:80px auto; padding:30px; border-radius:20px;">
+            <h2><i class="fas fa-envelope"></i> ኢሜይል ላክ</h2><input type="email" id="emailTo" placeholder="የተቀባዩ ኢሜይል"
+                style="width:100%; padding:12px;"><input type="text" id="emailSubject" placeholder="ርዕስ"
+                value="የምርመራ ሪፖርት" style="width:100%; padding:12px; margin-top:10px;"><select id="emailReportType"
+                style="width:100%; padding:12px; margin-top:10px;">
+                <option value="day">በቀን</option>
+                <option value="month">በወር</option>
+                <option value="year">በዓመት</option>
+                <option value="all">ሁሉንም</option>
+            </select>
+            <div>
+                <div class="calendar-toggle"><button onclick="setEmailCalendar('eth')" class="active"
+                        id="emCalEth">ኢትዮጵያ</button><button onclick="setEmailCalendar('greg')"
+                        id="emCalGreg">Gregorian</button></div>
+                <div id="emEthPicker">
+                    <div class="eth-date-picker"><select id="emEthDay"></select><select id="emEthMonth"></select><input
+                            type="number" id="emEthYear" placeholder="ዓ.ም" value="2017"></div>
+                </div>
+                <div id="emGregPicker" style="display:none;"><input type="date" id="emailReportDate"></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;"><button onclick="sendEmailWithExcel()"
+                    class="btn-action" style="background:var(--success); color:white;">ኢሜይል ላክ</button><button
+                    onclick="closeDialog('emailDialog')" class="btn-action"
+                    style="background:var(--danger); color:white;">ዝጋ</button></div>
+        </div>
+    </div>
+
+    <div id="changePasswordDialog"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:20000;">
+        <div style="background:white; max-width:400px; margin:100px auto; padding:30px; border-radius:20px;">
+            <h2>የይለፍ ቃል መቀየር</h2><input type="password" id="currentPassword" placeholder="የአሁኑ ይለፍ ቃል"
+                style="width:100%; padding:12px;"><input type="password" id="newPassword" placeholder="አዲስ ይለፍ ቃል"
+                style="width:100%; padding:12px; margin-top:10px;"><input type="password" id="confirmPassword"
+                placeholder="አዲስ ይለፍ ቃል ድገም" style="width:100%; padding:12px; margin-top:10px;">
+            <div style="display:flex; gap:10px; margin-top:20px;"><button onclick="changePassword()" class="btn-action"
+                    style="background:var(--success); color:white;">ቀይር</button><button
+                    onclick="closeDialog('changePasswordDialog')" class="btn-action"
+                    style="background:var(--danger); color:white;">ዝጋ</button></div>
+        </div>
+    </div>
+
+    <div id="loginLogsDialog"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999;">
+        <div
+            style="background:white; max-width:700px; margin:50px auto; padding:25px; border-radius:20px; max-height:85vh; overflow-y:auto;">
+            <h2>የግባት ሎግ</h2>
+            <div id="loginLogsContent"></div><button onclick="closeDialog('loginLogsDialog')" class="btn-action"
+                style="background:var(--danger); color:white; margin-top:20px;">ዝጋ</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // ከፍተኛ ደህንነት ሲስተም
+        // ============================================
+        const MAX_LOGIN_ATTEMPTS = 5;
+        const LOCKOUT_DURATION = 120;
+        let loginAttempts = parseInt(localStorage.getItem('TECH_LOGIN_ATTEMPTS') || '0');
+        let lockoutUntil = parseInt(localStorage.getItem('TECH_LOCKOUT_UNTIL') || '0');
+
+        // የGoogle Sheets ዩአርኤል
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwzEJO_ilGL8sqFs4JqBhrc7ZyBq7LlRYaqurx0a4cp9UwntfVTr7CdM8ynn3O1gdbIAw/exec";
+
+        // የተለያዩ CORS ፕሮክሲዎች
+        const PROXY_URLS = [
+            'https://cors-anywhere.herokuapp.com/',
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+            'https://thingproxy.freeboard.io/fetch/',
+            '' // ቀጥታ ግንኙነት
+        ];
+
+        // ============================================
+        // የኢትዮጵያ ወራት ስሞች
+        // ============================================
+        const ethiopianMonths = [
+            "መስከረም", "ጥቅምት", "ኅዳር", "ታኅሣሥ",
+            "ጥር", "የካቲት", "መጋቢት", "ሚያዝያ",
+            "ግንቦት", "ሰኔ", "ሐምሌ", "ነሐሴ", "ጳጉሜን"
+        ];
+
+        // ============================================
+        // የቀን ቅርጸት ማስተካከያ ተግባር (Date Normalization)
+        // ============================================
+        function normalizeDate(dateStr) {
+            if (!dateStr) return '';
+            let normalized = dateStr.trim();
+            if (normalized.includes('(')) normalized = normalized.split('(')[0].trim();
+            while (normalized.startsWith('/')) normalized = normalized.substring(1);
+            normalized = normalized.replace(/ዓ\.ም/g, '');
+            normalized = normalized.replace(/\s+/g, ' ').trim();
+            const parts = normalized.split('/');
+            if (parts.length === 3) {
+                let day = parts[0].padStart(2, '0');
+                let month = parts[1].padStart(2, '0');
+                let year = parts[2];
+                if (year.length === 2) year = '20' + year;
+                else if (year.length === 3) year = '2' + year;
+                else if (year.length > 4) {
+                    if (year.length === 5) year = year.substring(0, 4);
+                    else if (year.length === 6 && year.startsWith('0')) year = year.substring(2);
+                    else year = year.substring(0, 4);
+                }
+                let yearNum = parseInt(year, 10);
+                if (yearNum < 1900) yearNum += 2000;
+                else if (yearNum > 2100) yearNum = 2000 + (yearNum % 100);
+                year = yearNum.toString();
+                normalized = `${day}/${month}/${year}`;
+            }
+            return normalized.trim();
+        }
+
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            let normalized = normalizeDate(dateStr);
+            let parts = normalized.split('/');
+            if (parts.length !== 3) return dateStr;
+            let day = parts[0].padStart(2, '0');
+            let month = parseInt(parts[1], 10);
+            let year = parts[2];
+            if (month < 1 || month > 13) month = 1;
+            let monthName = ethiopianMonths[month - 1] || "";
+            return `${day}/${month}/${year} (${monthName})`;
+        }
+
+        function parseDateToComparable(dateStr) {
+            if (!dateStr) return null;
+            try {
+                let cleanDate = normalizeDate(dateStr);
+                let parts = cleanDate.split('/');
+                if (parts.length !== 3) return null;
+                let day = parseInt(parts[0], 10);
+                let month = parseInt(parts[1], 10);
+                let year = parseInt(parts[2], 10);
+                if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+                return year * 10000 + month * 100 + day;
+            } catch (e) { return null; }
+        }
+
+        function normalizeCloudDataDates(cloudData) {
+            if (!Array.isArray(cloudData)) return cloudData;
+            return cloudData.map(item => {
+                if (item.date) item.date = formatDisplayDate(normalizeDate(item.date));
+                return item;
+            });
+        }
+
+        function testDateNormalization() {
+            const testDates = [
+                "/01/11/2017 ዓ.ም", "/01/11/2017ዓ.ም", "/26/12/17  ዓ.ም",
+                "/04/04/032018 ዓ.ም", "/1/13/2917 ዓ.ም", "15/03/2017 (መስከረም)"
+            ];
+            console.log('=== የቀን ማስተካከያ ሙከራ ===');
+            testDates.forEach(date => {
+                let normalized = normalizeDate(date);
+                let display = formatDisplayDate(normalized);
+                let comparable = parseDateToComparable(date);
+                console.log(`መጀመሪያ: "${date}" → የተስተካከለ: "${normalized}" → ለማሳያ: "${display}" → ቁጥር: ${comparable}`);
+            });
+            alert('የቀን ማስተካከያ ተግባር ተሞክሯል! ኮንሶል ላይ ተመልከት።');
+        }
+
+        function checkLockout() {
+            let now = Math.floor(Date.now() / 1000);
+            if (lockoutUntil > now) { showLockout(lockoutUntil - now); return true; }
+            if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+                loginAttempts = 0;
+                localStorage.setItem('TECH_LOGIN_ATTEMPTS', '0');
+                localStorage.removeItem('TECH_LOCKOUT_UNTIL');
+                lockoutUntil = 0;
+            }
+            return false;
+        }
+
+        function showLockout(seconds) {
+            document.getElementById('lockoutOverlay').style.display = 'flex';
+            let interval = setInterval(() => {
+                seconds--;
+                document.getElementById('lockoutTimer').innerText = seconds + " ሰከንድ";
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    document.getElementById('lockoutOverlay').style.display = 'none';
+                    loginAttempts = 0;
+                    localStorage.setItem('TECH_LOGIN_ATTEMPTS', '0');
+                    localStorage.removeItem('TECH_LOCKOUT_UNTIL');
+                    lockoutUntil = 0;
+                }
+            }, 1000);
+        }
+
+        function togglePasswordVisibility() {
+            const pwField = document.getElementById('p');
+            const icon = document.getElementById('pwToggleIcon');
+            if (pwField.type === 'password') {
+                pwField.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                pwField.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function hashPassword(password) {
+            try { const salt = bcrypt.genSaltSync(10); return bcrypt.hashSync(password, salt); }
+            catch (e) { return password; }
+        }
+
+        function verifyPassword(password, hash) {
+            try { return bcrypt.compareSync(password, hash); }
+            catch (e) { return password === hash; }
+        }
+
+        function sanitizeInput(str) {
+            if (!str) return '';
+            return String(str).replace(/[<>"'`;]/g, '').trim();
+        }
+
+        // ============================================
+        // ETHIOPIAN CALENDAR
+        // ============================================
+        const ethMonths = [
+            { name: "መስከረም", days: 30 }, { name: "ጥቅምት", days: 30 },
+            { name: "ኅዳር", days: 30 }, { name: "ታኅሣሥ", days: 30 },
+            { name: "ጥር", days: 30 }, { name: "የካቲት", days: 30 },
+            { name: "መጋቢት", days: 30 }, { name: "ሚያዝያ", days: 30 },
+            { name: "ግንቦት", days: 30 }, { name: "ሰኔ", days: 30 },
+            { name: "ሐምሌ", days: 30 }, { name: "ነሐሴ", days: 30 },
+            { name: "ጳጉሜን", days: 5 }
+        ];
+
+        function isEthLeapYear(y) { return (y % 4) === 3; }
+        function getEthMonthDays(mi, y) { return mi === 12 ? (isEthLeapYear(y) ? 6 : 5) : 30; }
+
+        function ethToJDN(d, m, y) { return 1724221 + 365 * (y - 1) + Math.floor(y / 4) + 30 * m + d - 31; }
+        function jdnToGreg(jdn) {
+            let l = jdn + 68569, n = Math.floor(4 * l / 146097);
+            l -= Math.floor((146097 * n + 3) / 4);
+            let i = Math.floor(4000 * (l + 1) / 1461001);
+            l = l - Math.floor(1461 * i / 4) + 31;
+            let j = Math.floor(80 * l / 2447), day = l - Math.floor(2447 * j / 80);
+            l = Math.floor(j / 11);
+            return { year: 100 * (n - 49) + i + l, month: j + 2 - 12 * l, day };
+        }
+        function ethToGreg(d, m, y) { return jdnToGreg(ethToJDN(d, m, y)); }
+
+        function gregToJDN(y, m, d) {
+            let a = Math.floor((14 - m) / 12), yr = y + 4800 - a, mo = m + 12 * a - 3;
+            return d + Math.floor((153 * mo + 2) / 5) + 365 * yr + Math.floor(yr / 4) - Math.floor(yr / 100) + Math.floor(yr / 400) - 32045;
+        }
+
+        function jdnToEth(jdn) {
+            let r = (jdn - 1724221) % 1461, n = (r % 365) + 365 * Math.floor(r / 1460);
+            let y = 4 * Math.floor((jdn - 1724221) / 1461) + Math.floor(r / 365) - Math.floor(r / 1460);
+            let m = Math.floor(n / 30) + 1, d = (n % 30) + 1;
+            if (m > 13) m = 13;
+            return { year: y, month: m, day: d };
+        }
+
+        function gregToEth(gY, gM, gD) { return jdnToEth(gregToJDN(gY, gM, gD)); }
+
+        function formatEthDate(d, mi, y) {
+            let mn = ethMonths[mi - 1] ? ethMonths[mi - 1].name : "?";
+            return String(d).padStart(2, '0') + "/" + String(mi).padStart(2, '0') + "/" + y + " (" + mn + ")";
+        }
+
+        function parseEthDateStr(ds) {
+            if (!ds) return null;
+            let c = ds.split('(')[0].trim(), p = c.split('/');
+            if (p.length !== 3) return null;
+            return { day: parseInt(p[0], 10), month: parseInt(p[1], 10), year: parseInt(p[2], 10) };
+        }
+
+        function initEthDatePickers() {
+            ['ethMonth', 'excEthMonth', 'emEthMonth'].forEach(id => populateEthMonthSelect(id));
+            ['ethDay', 'excEthDay', 'emEthDay'].forEach(id => populateEthDaySelect(id, 30));
+            let t = new Date(), et = gregToEth(t.getFullYear(), t.getMonth() + 1, t.getDate());
+            document.getElementById('ethYear').value = et.year;
+            document.getElementById('ethMonth').value = et.month;
+            document.getElementById('excEthYear').value = et.year;
+            document.getElementById('emEthYear').value = et.year;
+            updateEthDateDays();
+            document.getElementById('ethDay').value = et.day;
+            updateEthDate();
+        }
+
+        function populateEthMonthSelect(id) {
+            let s = document.getElementById(id); if (!s) return; s.innerHTML = '';
+            ethMonths.forEach((m, i) => { let o = document.createElement('option'); o.value = i + 1; o.text = m.name; s.appendChild(o); });
+        }
+
+        function populateEthDaySelect(id, max) {
+            let s = document.getElementById(id); if (!s) return; let cv = s.value; s.innerHTML = '';
+            for (let i = 1; i <= max; i++) { let o = document.createElement('option'); o.value = i; o.text = i; s.appendChild(o); }
+            if (cv && cv <= max) s.value = cv;
+        }
+
+        function updateEthDateDays() {
+            let m = parseInt(document.getElementById('ethMonth').value) || 1;
+            let y = parseInt(document.getElementById('ethYear').value) || 2017;
+            populateEthDaySelect('ethDay', getEthMonthDays(m - 1, y));
+            updateEthDate();
+        }
+
+        function updateEthDate() {
+            let d = parseInt(document.getElementById('ethDay').value) || 1;
+            let m = parseInt(document.getElementById('ethMonth').value) || 1;
+            let y = parseInt(document.getElementById('ethYear').value) || 2017;
+            let f = formatEthDate(d, m, y);
+            document.getElementById('pDate').value = f;
+            let g = ethToGreg(d, m, y);
+            document.getElementById('datePreview').innerText = f + " = " + g.day + "/" + g.month + "/" + g.year + " (GC)";
+        }
+
+        function updateGregDate() {
+            let v = document.getElementById('gregDate').value; if (!v) return;
+            let p = v.split('-'), e = gregToEth(parseInt(p[0]), parseInt(p[1]), parseInt(p[2]));
+            document.getElementById('pDate').value = formatEthDate(e.day, e.month, e.year);
+        }
+
+        function setInputCalendar(t) {
+            document.getElementById('inpCalEth').classList.toggle('active', t === 'eth');
+            document.getElementById('inpCalGreg').classList.toggle('active', t === 'greg');
+            document.getElementById('inputEthPicker').style.display = t === 'eth' ? 'block' : 'none';
+            document.getElementById('inputGregPicker').style.display = t === 'greg' ? 'block' : 'none';
+        }
+
+        function setExcelCalendar(t) {
+            document.getElementById('excCalEth').classList.toggle('active', t === 'eth');
+            document.getElementById('excCalGreg').classList.toggle('active', t === 'greg');
+            document.getElementById('excEthPicker').style.display = t === 'eth' ? 'block' : 'none';
+            document.getElementById('excGregPicker').style.display = t === 'greg' ? 'block' : 'none';
+        }
+
+        function setEmailCalendar(t) {
+            document.getElementById('emCalEth').classList.toggle('active', t === 'eth');
+            document.getElementById('emCalGreg').classList.toggle('active', t === 'greg');
+            document.getElementById('emEthPicker').style.display = t === 'eth' ? 'block' : 'none';
+            document.getElementById('emGregPicker').style.display = t === 'greg' ? 'block' : 'none';
+        }
+
+        // ============================================
+        // EMERGENCY VEHICLE DETECTION
+        // ============================================
+        const EMERGENCY_THRESHOLD = 4;
+
+        function normalizePlate(plate) {
+            if (!plate) return '';
+            let normalized = String(plate).trim();
+            normalized = normalized.replace(/\./g, '');
+            normalized = normalized.replace(/\s+/g, ' ');
+            return normalized.toLowerCase();
+        }
+
+        function getEmergencyVehicles() {
+            let plateFailCounts = {};
+            db.forEach(item => {
+                if (item.status === "ችግር ያለበት") {
+                    let p = normalizePlate(item.plate || "");
+                    if (!plateFailCounts[p]) plateFailCounts[p] = { count: 0, records: [] };
+                    plateFailCounts[p].count++;
+                    plateFailCounts[p].records.push(item);
+                }
+            });
+            let emergencies = [];
+            for (let plate in plateFailCounts) {
+                if (plateFailCounts[plate].count >= EMERGENCY_THRESHOLD) {
+                    let recs = plateFailCounts[plate].records;
+                    let lastRec = recs[recs.length - 1];
+                    emergencies.push({
+                        plate: lastRec.plate,
+                        failCount: plateFailCounts[plate].count,
+                        lastDate: lastRec.date,
+                        location: lastRec.location,
+                        records: recs
+                    });
+                }
+            }
+            return emergencies;
+        }
+
+        function isEmergencyPlate(plate) {
+            let p = normalizePlate(plate || "");
+            let count = 0;
+            db.forEach(item => {
+                if (normalizePlate(item.plate || "") === p && item.status === "ችግር ያለበት") count++;
+            });
+            return count >= EMERGENCY_THRESHOLD;
+        }
+
+        function renderEmergencyList() {
+            let emergencies = getEmergencyVehicles();
+            let h = '';
+            emergencies.forEach(e => {
+                h += `<tr class="emergency-row">
+                    <td style="font-weight:900;">${e.plate}</td>
+                    <td><span class="emergency-badge">⚠️ ${e.failCount} ጊዜ</span></td>
+                    <td>${e.lastDate}</td>
+                    <td>${e.location}</td>
+                    <td><span class="emergency-badge">🚨 ኢመርጀንሲ</span></td>
+                </tr>`;
+            });
+            document.getElementById('emergencyItems').innerHTML = h || '<tr><td colspan="5" style="padding:20px; color:#888;">ኢመርጀንሲ ተሽከርካሪ የለም</td></tr>';
+            let cnt = emergencies.length;
+            document.getElementById('emergencyNum').innerText = cnt;
+            document.getElementById('emergencyMenuCount').innerText = cnt;
+            document.getElementById('emergencyCount').style.display = cnt > 0 ? 'inline-block' : 'none';
+        }
+
+        function toggleEmergencyList() {
+            let s = document.getElementById('emergencyDisplay').style;
+            s.display = (s.display === 'none' || s.display === '') ? 'block' : 'none';
+            renderEmergencyList();
+        }
+
+        // ============================================
+        // DUPLICATE VEHICLE DETECTION
+        // ============================================
+        function getDuplicateVehicles() {
+            let plateDateCounts = {};
+            let duplicates = [];
+            db.forEach(item => {
+                let key = `${normalizePlate(item.plate)}_${item.date}`;
+                if (!plateDateCounts[key]) plateDateCounts[key] = [];
+                plateDateCounts[key].push(item);
+            });
+            for (let key in plateDateCounts) {
+                if (plateDateCounts[key].length > 1) {
+                    let items = plateDateCounts[key];
+                    let [plate, date] = key.split('_');
+                    let locations = [...new Set(items.map(i => i.location))].join(', ');
+                    duplicates.push({ plate: items[0].plate, date: date, count: items.length, locations: locations, items: items });
+                }
+            }
+            return duplicates;
+        }
+
+        function isDuplicatePlate(plate, date) {
+            let key = `${normalizePlate(plate)}_${date}`;
+            let count = 0;
+            db.forEach(item => { if (`${normalizePlate(item.plate)}_${item.date}` === key) count++; });
+            return count > 1;
+        }
+
+        function renderDuplicateList() {
+            let duplicates = getDuplicateVehicles();
+            let h = '';
+            duplicates.sort((a, b) => b.count - a.count).forEach(d => {
+                h += `<tr>
+                    <td style="font-weight:900; color:#2196F3;">${d.plate}</td>
+                    <td>${d.date}</td>
+                    <td><span class="duplicate-badge">🔷 ${d.count} ጊዜ</span></td>
+                    <td>${d.locations}</td>
+                </tr>`;
+            });
+            document.getElementById('duplicateItems').innerHTML = h || '<tr><td colspan="4" style="padding:20px; color:#888;">ዱፕሊኬት ተሽከርካሪ የለም</td></tr>';
+            let cnt = duplicates.length;
+            document.getElementById('duplicateNum').innerText = cnt;
+            document.getElementById('duplicateCount').style.display = cnt > 0 ? 'inline-block' : 'none';
+        }
+
+        function toggleDuplicateList() {
+            let s = document.getElementById('duplicateDisplay').style;
+            s.display = (s.display === 'none' || s.display === '') ? 'block' : 'none';
+            renderDuplicateList();
+        }
+
+        function findDuplicates() {
+            let duplicates = getDuplicateVehicles();
+            if (duplicates.length === 0) alert('ምንም ዱፕሊኬት ተሽከርካሪ አልተገኘም');
+            else {
+                let msg = `🔷 ${duplicates.length} ዱፕሊኬት ተሽከርካሪዎች ተገኝተዋል\n\n`;
+                duplicates.forEach(d => { msg += `${d.plate}: ${d.count} ጊዜ (${d.date})\n`; });
+                alert(msg);
+                toggleDuplicateList();
+            }
+        }
+
+        // ============================================
+        // CORE SYSTEM
+        // ============================================
+        const DB_NAME = 'TECH_SYSTEM_DB', DB_VERSION = 1;
+        let idb = null, db = [], bin = [];
+        let users = [];
+        let currentLang = localStorage.getItem('TECH_LANG') || 'am';
+        let editIdx = null, editCloudRow = null, userLocation = null;
+        let loginLogs = [];
+
+        function initializeUsers() {
+            const storedUsers = localStorage.getItem('TECH_SYSTEM_USERS');
+            if (storedUsers) {
+                try {
+                    users = JSON.parse(storedUsers);
+                    let needsUpdate = false;
+                    users.forEach(u => {
+                        if (!u.passHash) {
+                            needsUpdate = true;
+                            if (u.name === 'admin') u.passHash = hashPassword('admin');
+                            else u.passHash = hashPassword('user123');
+                        }
+                    });
+                    if (needsUpdate) localStorage.setItem('TECH_SYSTEM_USERS', JSON.stringify(users));
+                } catch (e) { users = []; }
+            }
+            if (!users || users.length === 0) {
+                users = [
+                    { name: "admin", role: "admin", location: "", passHash: hashPassword('admin') },
+                    { name: "user1", role: "user", location: "ሰቲት", passHash: hashPassword('user123') },
+                    { name: "user2", role: "user", location: "ወልቃይት", passHash: hashPassword('user123') },
+                    { name: "user3", role: "user", location: "ዳንሻ", passHash: hashPassword('user123') },
+                    { name: "user4", role: "user", location: "ጠገዴ", passHash: hashPassword('user123') },
+                    { name: "user5", role: "user", location: "ዞን", passHash: hashPassword('user123') }
+                ];
+                localStorage.setItem('TECH_SYSTEM_USERS', JSON.stringify(users));
+            }
+            loginLogs = JSON.parse(localStorage.getItem('TECH_LOGIN_LOGS') || '[]');
+        }
+
+        function logLogin(u, s) {
+            loginLogs.unshift({ time: new Date().toISOString(), username: u, status: s });
+            if (loginLogs.length > 500) loginLogs.pop();
+            localStorage.setItem('TECH_LOGIN_LOGS', JSON.stringify(loginLogs));
+        }
+
+        async function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                let req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    let d = e.target.result;
+                    if (!d.objectStoreNames.contains('main')) d.createObjectStore('main', { keyPath: 'id', autoIncrement: true });
+                    if (!d.objectStoreNames.contains('trash')) d.createObjectStore('trash', { keyPath: 'id', autoIncrement: true });
+                };
+                req.onsuccess = async (e) => {
+                    idb = e.target.result;
+                    await syncFromIndexedDB();
+                    resolve();
+                };
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        async function syncFromIndexedDB() {
+            db = await getAllFromStore('main');
+            bin = await getAllFromStore('trash');
+            refresh();
+        }
+
+        function getAllFromStore(sn) {
+            return new Promise(r => {
+                let tx = idb.transaction(sn, 'readonly');
+                let rq = tx.objectStore(sn).getAll();
+                rq.onsuccess = () => r(rq.result || []);
+            });
+        }
+
+        const i18n = {
+            am: {
+                L_subtitle: "የቴክኒክ ምርመራ አስተዳደር ሲስተም (አጥንክሮ የተሰራ)",
+                L_loginBtn: "ሲስተም ግባ",
+                D_allTasks: "አጠቃላይ ተግባራት",
+                D_fetch: "ከክላውድ ዳታ አውርድ",
+                D_sync: "ሁሉንም ወደ ክላውድ ላክ",
+                D_import: "ኤክሴል አስገባ",
+                D_export: "ኤክሴል አውርድ",
+                D_backup: "ሎካል ባካፕ",
+                D_bulkLabel: "የጅምላ ማጥፊያ",
+                D_bulkBtn: "በጅምላ አጥፋ",
+                D_bin: "ሪሳይክል ቢን",
+                D_logout: "ሲስተሙን ዝጋ",
+                D_emergency: "ኢመርጀንሲ ተሽከርካሪዎች",
+                D_changePwd: "የይለፍ ቃል ለውጥ",
+                TH_id: "ተ.ቁ",
+                TH_rec: "ደረሰኝ",
+                TH_plate: "ሰሌዳ",
+                TH_type: "ዓይነት",
+                TH_date: "ቀን",
+                TH_loc: "ቦታ",
+                TH_res: "ምርመራ",
+                TH_amt: "ብር",
+                TH_act: "እርምጃ",
+                ST_total: "ጠቅላላ ተሽከርካሪ",
+                ST_income: "ጠቅላላ ገቢ (ብር)",
+                ST_passed: "ችግር የለለበት (ያለፈ)",
+                ST_failed: "ችግር ያለበት (ያላለፈ)",
+                O_allLoc: "ሁሉም ቦታ",
+                O_selLoc: "ቦታ ምረጥ",
+                B_title: "ሪሳይክል ቢን",
+                B_restoreAll: "ሁሉንም መልስ",
+                B_empty: "ቢኑን ባዶ አድርግ",
+                netOn: "ኦንላይን",
+                netOff: "ኦፍላይን"
+            },
+            en: {
+                L_subtitle: "Technical Inspection System (Hardened)",
+                L_loginBtn: "Login",
+                D_allTasks: "Tasks",
+                D_fetch: "Fetch Cloud",
+                D_sync: "Sync Cloud",
+                D_import: "Import",
+                D_export: "Export",
+                D_backup: "Backup",
+                D_bulkLabel: "Bulk Delete",
+                D_bulkBtn: "Delete",
+                D_bin: "Recycle Bin",
+                D_logout: "Logout",
+                D_emergency: "Emergency Vehicles",
+                D_changePwd: "Change Password",
+                TH_id: "No.",
+                TH_rec: "Receipt",
+                TH_plate: "Plate",
+                TH_type: "Type",
+                TH_date: "Date",
+                TH_loc: "Location",
+                TH_res: "Status",
+                TH_amt: "Amount",
+                TH_act: "Action",
+                ST_total: "Total",
+                ST_income: "Revenue",
+                ST_passed: "Passed",
+                ST_failed: "Failed",
+                O_allLoc: "All",
+                O_selLoc: "Select",
+                B_title: "Recycle Bin",
+                B_restoreAll: "Restore All",
+                B_empty: "Empty",
+                netOn: "Online",
+                netOff: "Offline"
+            }
+        };
+
+        function showToast(m) { const t = document.getElementById("toast"); t.innerHTML = m; t.className = "show"; setTimeout(() => t.className = "", 3000); }
+
+        function toggleLang(l) {
+            currentLang = l;
+            localStorage.setItem('TECH_LANG', l);
+            applyLang();
+        }
+
+        function applyLang() {
+            const d = i18n[currentLang];
+            for (let id in d) {
+                let el = document.getElementById(id);
+                if (el) {
+                    if (['SPAN', 'H3', 'P', 'BUTTON', 'LABEL', 'TH'].includes(el.tagName))
+                        el.innerText = d[id];
+                    else if (el.tagName === 'OPTION')
+                        el.text = d[id];
+                }
+            }
+            refresh();
+        }
+
+        window.addEventListener('online', updateNetStatus);
+        window.addEventListener('offline', updateNetStatus);
+
+        function updateNetStatus() {
+            const el = document.getElementById('netStatus'), txt = document.getElementById('netText');
+            if (navigator.onLine) {
+                el.className = "status-indicator online";
+                txt.innerText = i18n[currentLang].netOn;
+            } else {
+                el.className = "status-indicator offline";
+                txt.innerText = i18n[currentLang].netOff;
+            }
+        }
+
+        function showChangePasswordDialog() {
+            document.getElementById('changePasswordDialog').style.display = 'block';
+        }
+
+        async function changePassword() {
+            const currentPwd = document.getElementById('currentPassword').value;
+            const newPwd = document.getElementById('newPassword').value;
+            const confirmPwd = document.getElementById('confirmPassword').value;
+            const username = sessionStorage.getItem('uname');
+            if (!currentPwd || !newPwd || !confirmPwd) return alert(currentLang === 'am' ? "ሁሉንም መረጃዎች ይሙሉ" : "Fill all fields");
+            if (newPwd !== confirmPwd) return alert(currentLang === 'am' ? "አዲስ ይለፍ ቃል አይዛመድም" : "New passwords don't match");
+            if (newPwd.length < 6) return alert(currentLang === 'am' ? "የይለፍ ቃል ቢያንስ 6 ቁምፊ መሆን አለበት" : "Password must be at least 6 characters");
+            const user = users.find(u => u.name === username);
+            if (!user) return alert("User not found");
+            const isValid = verifyPassword(currentPwd, user.passHash);
+            if (!isValid) return alert(currentLang === 'am' ? "የአሁኑ ይለፍ ቃል ትክክል አይደለም" : "Current password is incorrect");
+            user.passHash = hashPassword(newPwd);
+            localStorage.setItem('TECH_SYSTEM_USERS', JSON.stringify(users));
+            closeDialog('changePasswordDialog');
+            showToast(currentLang === 'am' ? "✅ የይለፍ ቃል ተቀይሯል" : "✅ Password changed");
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        function login() {
+            if (checkLockout()) return;
+            const uN = sanitizeInput(document.getElementById('u').value.toLowerCase());
+            const uP = document.getElementById('p').value;
+            if (!uN || !uP) { alert(currentLang === 'am' ? "እባክዎ ሁሉንም መረጃዎች ይሙሉ" : "Please fill all fields"); return; }
+            initializeUsers();
+            const user = users.find(x => x.name === uN);
+            if (!user) {
+                loginAttempts++;
+                localStorage.setItem('TECH_LOGIN_ATTEMPTS', String(loginAttempts));
+                logLogin(uN, 'failed');
+                if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+                    lockoutUntil = Math.floor(Date.now() / 1000) + LOCKOUT_DURATION;
+                    localStorage.setItem('TECH_LOCKOUT_UNTIL', String(lockoutUntil));
+                    showLockout(LOCKOUT_DURATION);
+                } else alert((currentLang === 'am' ? "የተሳሳተ መረጃ! ቀሪ ሙከራ: " : "Invalid! Remaining: ") + (MAX_LOGIN_ATTEMPTS - loginAttempts));
+                return;
+            }
+            const isValid = verifyPassword(uP, user.passHash);
+            if (isValid) {
+                loginAttempts = 0;
+                localStorage.setItem('TECH_LOGIN_ATTEMPTS', '0');
+                logLogin(uN, 'success');
+                sessionStorage.setItem('isLogged', 'true');
+                sessionStorage.setItem('role', user.role);
+                sessionStorage.setItem('uname', user.name);
+                sessionStorage.setItem('userLocation', user.location || "");
+                userLocation = user.location || "";
+                startApp();
+            } else {
+                loginAttempts++;
+                localStorage.setItem('TECH_LOGIN_ATTEMPTS', String(loginAttempts));
+                logLogin(uN, 'failed');
+                if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+                    lockoutUntil = Math.floor(Date.now() / 1000) + LOCKOUT_DURATION;
+                    localStorage.setItem('TECH_LOCKOUT_UNTIL', String(lockoutUntil));
+                    showLockout(LOCKOUT_DURATION);
+                } else alert((currentLang === 'am' ? "የተሳሳተ መረጃ! ቀሪ ሙከራ: " : "Invalid! Remaining: ") + (MAX_LOGIN_ATTEMPTS - loginAttempts));
+            }
+        }
+
+        async function startApp() {
+            await initIndexedDB();
+            const role = sessionStorage.getItem('role');
+            userLocation = sessionStorage.getItem('userLocation') || "";
+            document.getElementById('loginArea').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            let badge = sessionStorage.getItem('uname').toUpperCase() + ` (${role})`;
+            if (userLocation) badge += ` - ${userLocation}`;
+            document.getElementById('userBadge').innerHTML = `<i class="fas fa-user-circle"></i> ${badge}`;
+            if (role === 'user') document.querySelectorAll('.admin-only').forEach(el => el.classList.add('restricted'));
+            if (userLocation) {
+                const sLoc = document.getElementById('sLoc'); if (sLoc) sLoc.value = userLocation;
+                const iLoc = document.getElementById('loc');
+                if (iLoc) { iLoc.innerHTML = ''; let o = document.createElement('option'); o.value = userLocation; o.text = userLocation; iLoc.appendChild(o); }
+            }
+            initEthDatePickers(); applyLang(); updateNetStatus();
+            renderDuplicateList();
+        }
+
+        if (sessionStorage.getItem('isLogged')) {
+            initializeUsers();
+            startApp();
+        } else {
+            checkLockout();
+            initializeUsers();
+        }
+
+        function logout() { sessionStorage.clear(); location.reload(); }
+
+        function closeDialog(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // ============================================
+        // DUPLICATE CHECK - ዱፕሊኬት መከላከል
+        // ============================================
+        function isDuplicate(entry, excludeId = null) {
+            const newPlate = normalizePlate(entry.plate || "");
+            const newDate = String(entry.date || "").trim();
+            if (!newPlate || !newDate) return false;
+            return db.some(row => {
+                if (excludeId !== null && row.id === excludeId) return false;
+                const existingPlate = normalizePlate(row.plate || "");
+                const existingDate = String(row.date || "").trim();
+                return newPlate === existingPlate && newDate === existingDate;
+            });
+        }
+
+        async function removeDuplicates() {
+            if (!db.length) { alert('ምንም መረጃ የለም'); return; }
+            const seen = new Map();
+            const duplicates = [];
+            db.forEach(item => {
+                const key = `${normalizePlate(item.plate)}_${item.date}`;
+                if (seen.has(key)) duplicates.push(item);
+                else seen.set(key, true);
+            });
+            if (duplicates.length === 0) { alert('ምንም ተደጋጋሚ መረጃ አልተገኘም'); return; }
+            const confirmDelete = confirm(`${duplicates.length} ተደጋጋሚ መረጃዎች ተገኝተዋል። ማስወገድ ትፈልጋለህ?`);
+            if (confirmDelete) {
+                let tx = idb.transaction('main', 'readwrite');
+                let store = tx.objectStore('main');
+                for (let dup of duplicates) store.delete(dup.id);
+                tx.oncomplete = async () => {
+                    await syncFromIndexedDB();
+                    alert(`${duplicates.length} ተደጋጋሚ መረጃዎች ተወግደዋል`);
+                };
+            }
+        }
+
+        function calculateLocationIncome() {
+            if (!db.length) { alert('ምንም መረጃ የለም'); return; }
+            const locations = [...new Set(db.map(item => item.location))];
+            let totalAll = 0;
+            let output = '=== የቦታ ገቢ ማጠቃለያ ===\n\n';
+            locations.sort().forEach(loc => {
+                const locationItems = db.filter(item => item.location === loc);
+                const total = locationItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                const count = locationItems.length;
+                output += `${loc}: ${total.toLocaleString()} ብር (${count} ተሽከርካሪዎች)\n`;
+                totalAll += total;
+            });
+            output += `\nጠቅላላ: ${totalAll.toLocaleString()} ብር`;
+            console.log(output);
+            alert(output);
+        }
+
+        function verifyLocationData() {
+            if (!db.length) { alert('ምንም መረጃ የለም'); return; }
+            const googleSheetData = { 'ወልቃይት': 48200, 'ሰቲት': 0, 'ዳንሻ': 0, 'ጠገዴ': 0, 'ዞን': 0 };
+            let output = '=== ከጎግል ሺት ጋር ማወዳደር ===\n\n';
+            let hasDiscrepancy = false;
+            const locations = [...new Set(db.map(item => item.location))];
+            locations.forEach(loc => {
+                const locationItems = db.filter(item => item.location === loc);
+                const systemTotal = locationItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                const googleTotal = googleSheetData[loc] || 0;
+                output += `${loc}:\n  ከሲስተም: ${systemTotal.toLocaleString()} ብር\n  ከጎግል ሺት: ${googleTotal.toLocaleString()} ብር\n`;
+                if (systemTotal !== googleTotal && googleTotal > 0) { const diff = googleTotal - systemTotal; output += `  ⚠️ ልዩነት: ${diff.toLocaleString()} ብር\n`; hasDiscrepancy = true; }
+                output += '\n';
+            });
+            if (!hasDiscrepancy) output += '✅ ሁሉም መረጃዎች ተመሳሳይ ናቸው!\n';
+            console.log(output);
+            alert(output);
+        }
+
+        function showAllLocations() {
+            if (!db.length) { alert('ምንም መረጃ የለም'); return; }
+            const locations = [...new Set(db.map(item => item.location))];
+            let output = '=== በሲስተሙ ውስጥ ያሉ ቦታዎች ===\n\n';
+            locations.sort().forEach((loc, index) => { const count = db.filter(item => item.location === loc).length; output += `${index + 1}. "${loc}" - ${count} መረጃዎች\n`; });
+            console.log(output);
+            alert(output);
+        }
+
+        function clearDateFilter() {
+            document.getElementById('sDateFrom').value = '';
+            document.getElementById('sDateTo').value = '';
+            refresh();
+        }
+
+        // ============================================
+        // REFRESH FUNCTION - የተሻሻለ (የቀን ማጣሪያ እንዲሰራ)
+        // ============================================
+        function refresh() {
+            const sP = document.getElementById('sPlate') ? document.getElementById('sPlate').value.toLowerCase() : "";
+            const sR = document.getElementById('sReceipt') ? document.getElementById('sReceipt').value : "";
+            const sL = document.getElementById('sLoc') ? document.getElementById('sLoc').value : "";
+            const sS = document.getElementById('sStatus') ? document.getElementById('sStatus').value : "";
+            const dateFromStr = document.getElementById('sDateFrom') ? document.getElementById('sDateFrom').value : "";
+            const dateToStr = document.getElementById('sDateTo') ? document.getElementById('sDateTo').value : "";
+            const dF = parseDateToComparable(dateFromStr);
+            const dT = parseDateToComparable(dateToStr);
+            let html = '', total = 0, count = 0, passed = 0, failed = 0;
+            let sorted = [...db].sort((a, b) => {
+                const rA = String(a.receipt || "").replace(/\D/g, '');
+                const rB = String(b.receipt || "").replace(/\D/g, '');
+                return (parseInt(rA) || 0) - (parseInt(rB) || 0);
+            });
+            sorted.forEach((d, idx) => {
+                const userLoc = sessionStorage.getItem('userLocation') || "";
+                const enforceUserLoc = userLoc !== "" && sessionStorage.getItem('role') !== 'admin';
+                const normalizedSearchPlate = normalizePlate(sP);
+                const normalizedItemPlate = normalizePlate(d.plate);
+                if (sP !== "" && !normalizedItemPlate.includes(normalizedSearchPlate)) return;
+                if (sR !== "" && !String(d.receipt).includes(sR)) return;
+                const selectedLocation = sL ? sL.toString().trim() : "";
+                const itemLocation = d.location ? d.location.toString().trim() : "";
+                if (selectedLocation !== "" && itemLocation !== selectedLocation) return;
+                if (sS !== "" && d.status !== sS) return;
+                if (enforceUserLoc && itemLocation !== userLoc.toString().trim()) return;
+                if (dF !== null || dT !== null) {
+                    const itemDateNum = parseDateToComparable(d.date);
+                    if (itemDateNum === null) return;
+                    if (dF !== null && itemDateNum < dF) return;
+                    if (dT !== null && itemDateNum > dT) return;
+                }
+                count++;
+                let amount = parseFloat(d.amount) || 0;
+                total += amount;
+                if (d.status === "ችግር የለበትም") passed++; else failed++;
+                let isEmerg = isEmergencyPlate(d.plate);
+                let isDup = isDuplicatePlate(d.plate, d.date);
+                let rowClass = '';
+                if (isEmerg) rowClass = 'class="emergency-row"';
+                else if (isDup) rowClass = 'class="duplicate-row"';
+                let emergBadge = isEmerg ? ' <span class="emergency-badge">🚨 ኢመርጀንሲ</span>' : '';
+                let dupBadge = isDup && !isEmerg ? ' <span class="duplicate-badge">🔷 ዱፕሊኬት</span>' : '';
+                html += `<tr ${rowClass}>
+                    <td>${idx + 1}</td>
+                    <td>${d.receipt || '<span style="color:#aaa;">-</span>'}</td>
+                    <td style="font-weight:${isEmerg ? '900' : 'normal'};">${d.plate}${emergBadge}${dupBadge}</td>
+                    <td>${d.vType}</td>
+                    <td>${d.date}</td>
+                    <td>${d.location}</td>
+                    <td style="color:${d.status === 'ችግር የለበትም' ? 'green' : 'red'}; font-weight:bold;">${d.status}</td>
+                    <td>${amount.toLocaleString()}</td>
+                    <td>
+                        <button onclick="edit(${d.id})" style="color:blue; border:none; background:none; cursor:pointer;" title="ኢዲት"><i class="fas fa-edit"></i></button>
+                        <button onclick="toBin(${d.id})" style="color:red; border:none; background:none; cursor:pointer;" title="ሰርዝ"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('mainTable').innerHTML = html;
+            document.getElementById('uiCount').innerText = count;
+            document.getElementById('uiSum').innerText = total.toLocaleString();
+            document.getElementById('uiPassed').innerText = passed;
+            document.getElementById('uiFailed').innerText = failed;
+            document.getElementById('binCnt').innerText = bin.length;
+            renderBin();
+            renderEmergencyList();
+            renderDuplicateList();
+        }
+
+        // ============================================
+        // የGoogle Sheets ግንኙነት ኮድ
+        // ============================================
+        function checkInternetConnection() {
+            if (!navigator.onLine) { alert("❌ ኢንተርኔት ግንኙነት የለም! እባክዎ ኢንተርኔትዎን ያገናኙ"); return false; }
+            return true;
+        }
+
+        async function testGoogleSheetConnection() {
+            if (!checkInternetConnection()) return;
+            showLoadingOverlay(true);
+            showToast("🔌 ግንኙነት በመፈተሽ ላይ...");
+            try {
+                await fetch(GOOGLE_SHEET_URL, { method: 'HEAD', mode: 'no-cors' });
+                showToast("✅ ግንኙነት ተሳክቷል");
+                alert("✅ የጎግል ሺት ግንኙነት ተሳክቷል!\n\nማስታወሻ: ውሂብ ለማውረድ 'ከክላውድ ዳታ አውርድ' የሚለውን ይጠቀሙ።");
+            } catch (error) {
+                console.error('ግንኙነት ስህተት:', error);
+                alert(`❌ ከጎግል ሺት ጋር መገናኘት አልተሳካም።`);
+            } finally { showLoadingOverlay(false); }
+        }
+
+        async function fetchFromCloud() {
+            if (!checkInternetConnection()) return;
+            showLoadingOverlay(true);
+            showToast("☁️ ውሂብ በማውረድ ላይ...");
+            try {
+                const response = await fetch(GOOGLE_SHEET_URL, { method: 'GET', mode: 'cors', cache: 'no-cache' });
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    const normalizedData = normalizeCloudDataDates(data);
+                    await saveCloudDataToDB(normalizedData);
+                    showToast(`✅ ${data.length} መረጃዎች ከክላውድ ወርደዋል`);
+                } else throw new Error('Data format is not an array');
+            } catch (error) {
+                console.error('Fetch error:', error);
+                try {
+                    const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(GOOGLE_SHEET_URL);
+                    const res = await fetch(proxyUrl);
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        await saveCloudDataToDB(normalizeCloudDataDates(data));
+                        showToast(`✅ ዳታ በProxy በኩል ወርዷል`);
+                    } else alert("❌ ከክላውድ ጋር መገናኘት አልተሳካም። እባክዎ ኢንተርኔትዎን ያረጋግጡ።");
+                } catch (proxyError) { alert("❌ የክላውድ ግንኙነት ተቋርጧል። እባክዎ ቆይተው ይሞክሩ።"); }
+            } finally { showLoadingOverlay(false); }
+        }
+
+        async function saveCloudDataToDB(cloudData) {
+            const tx = idb.transaction('main', 'readwrite');
+            const store = tx.objectStore('main');
+            let newCount = 0, duplicateCount = 0;
+            for (const item of cloudData) {
+                if (!item.plate || item.plate.toString().trim() === "") continue;
+                const cleanItem = {
+                    receipt: String(item.receipt || "").trim(),
+                    plate: String(item.plate || "").trim(),
+                    vType: String(item.vType || "").trim(),
+                    date: String(item.date || "").trim(),
+                    location: String(item.location || "").trim(),
+                    status: String(item.status || "").trim(),
+                    amount: Number(item.amount || 0)
+                };
+                if (!isDuplicate(cleanItem)) { store.add(cleanItem); newCount++; }
+                else duplicateCount++;
+            }
+            tx.oncomplete = async () => {
+                await syncFromIndexedDB();
+                showToast(`✅ ${newCount} አዲስ መረጃዎች ገብተዋል`);
+                renderDuplicateList();
+            };
+        }
+
+        async function syncToCloud(operation, data) {
+            if (!checkInternetConnection()) return false;
+            try {
+                await fetch(GOOGLE_SHEET_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ operation: operation, data: data })
+                });
+                return true;
+            } catch (error) { return false; }
+        }
+
+        async function syncAllToCloud() {
+            if (!checkInternetConnection()) return;
+            if (!db || db.length === 0) { alert("ምንም ውሂብ የለም"); return; }
+            showLoadingOverlay(true);
+            showToast("📤 መረጃ ወደ ክላውድ በመላክ ላይ...");
+            const cleanData = db.map(item => ({
+                receipt: String(item.receipt || ""),
+                plate: String(item.plate || ""),
+                vType: String(item.vType || ""),
+                date: String(item.date || ""),
+                location: String(item.location || ""),
+                status: String(item.status || ""),
+                amount: Number(item.amount || 0)
+            }));
+            try {
+                const success = await syncToCloud('sync', cleanData);
+                if (success) { showToast(`✅ ${cleanData.length} መረጃዎች በተሳካ ሁኔታ ተልከዋል`); alert(`✅ ${cleanData.length} መረጃዎች በሙሉ ተልከዋል`); }
+                else alert("❌ መላክ አልተቻለም። እባክዎ ኢንተርኔትዎን ወይም Apps Script ሊንክዎን ያረጋግጡ።");
+            } catch (error) { console.error(error); alert("❌ ስህተት ተፈጥሯል፦ " + error.message); }
+            finally { showLoadingOverlay(false); }
+        }
+
+        async function forceSyncToCloud() { await syncAllToCloud(); }
+
+        // ============================================
+        // SAVE FUNCTION - አዲስ የተጨመረ
+        // ============================================
+        async function save() {
+            const receipt = sanitizeInput(document.getElementById('receipt').value);
+            const plate = sanitizeInput(document.getElementById('plate').value);
+            const vType = sanitizeInput(document.getElementById('vType').value);
+            const date = document.getElementById('pDate').value;
+            const location = document.getElementById('loc').value;
+            const status = document.getElementById('status').value;
+            const amount = parseFloat(document.getElementById('amt').value) || 0;
+
+            if (!plate) return alert(currentLang === 'am' ? "ሰሌዳ ማስገባት አለብህ" : "Plate is required");
+            if (!date) return alert(currentLang === 'am' ? "ቀን ማስገባት አለብህ" : "Date is required");
+
+            const newItem = { receipt, plate, vType, date, location, status, amount };
+
+            if (editIdx !== null) {
+                // Updating
+                const existingItem = db.find(i => i.id === editIdx);
+                if (!existingItem) { alert("Item not found"); return; }
+                if (isDuplicate(newItem, editIdx)) return alert(currentLang === 'am' ? "ይህ ሰሌዳ በዚህ ቀን ቀድሞ ተመዝግቧል" : "This plate already exists on this date");
+                const tx = idb.transaction('main', 'readwrite');
+                const store = tx.objectStore('main');
+                const updatedItem = { ...newItem, id: editIdx };
+                store.put(updatedItem);
+                tx.oncomplete = async () => {
+                    await syncFromIndexedDB();
+                    showToast(currentLang === 'am' ? "✅ ተሻሽሏል" : "✅ Updated");
+                    resetForm();
+                };
+            } else {
+                // Adding new
+                if (isDuplicate(newItem)) return alert(currentLang === 'am' ? "ይህ ሰሌዳ በዚህ ቀን ቀድሞ ተመዝግቧል" : "This plate already exists on this date");
+                const tx = idb.transaction('main', 'readwrite');
+                const store = tx.objectStore('main');
+                store.add(newItem);
+                tx.oncomplete = async () => {
+                    await syncFromIndexedDB();
+                    showToast(currentLang === 'am' ? "✅ ተቀምጧል" : "✅ Saved");
+                    resetForm();
+                };
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('receipt').value = "";
+            document.getElementById('plate').value = "";
+            document.getElementById('vType').value = "";
+            document.getElementById('amt').value = "";
+            // Reset date picker to today's Ethiopian date
+            let t = new Date(), et = gregToEth(t.getFullYear(), t.getMonth() + 1, t.getDate());
+            document.getElementById('ethYear').value = et.year;
+            document.getElementById('ethMonth').value = et.month;
+            updateEthDateDays();
+            document.getElementById('ethDay').value = et.day;
+            updateEthDate();
+            // Set location to user's location if available, else keep first option
+            const userLoc = sessionStorage.getItem('userLocation');
+            if (userLoc) {
+                const locSelect = document.getElementById('loc');
+                if (locSelect && locSelect.querySelector(`option[value="${userLoc}"]`)) locSelect.value = userLoc;
+            }
+            document.getElementById('status').value = "ችግር የለበትም";
+            editIdx = null;
+            editCloudRow = null;
+            document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save"></i> <span>Local</span>';
+            document.getElementById('inputFormCard').classList.remove('editing-mode');
+        }
+
+        // ============================================
+        // DELETE FUNCTIONS - መሰረዝ ተግባራት
+        // ============================================
+        async function toBin(id) {
+            let item = db.find(d => d.id === id);
+            let tx = idb.transaction(['main', 'trash'], 'readwrite');
+            tx.objectStore('trash').add(item);
+            tx.objectStore('main').delete(item.id);
+            tx.oncomplete = async () => {
+                await syncFromIndexedDB();
+                showToast("🗑️ ተሰርዟል");
+                if (navigator.onLine) await syncToCloud('delete', item);
+            };
+        }
+
+        function clearForm() { ['receipt', 'plate', 'vType', 'amt'].forEach(id => document.getElementById(id).value = ""); }
+
+        function edit(id) {
+            let d = db.find(i => i.id === id);
+            if (!d) return;
+            document.getElementById('receipt').value = d.receipt || "";
+            document.getElementById('plate').value = d.plate;
+            document.getElementById('vType').value = d.vType;
+            document.getElementById('pDate').value = d.date;
+            let parsed = parseEthDateStr(d.date);
+            if (parsed) {
+                document.getElementById('ethYear').value = parsed.year;
+                document.getElementById('ethMonth').value = parsed.month;
+                updateEthDateDays();
+                document.getElementById('ethDay').value = parsed.day;
+            }
+            document.getElementById('loc').value = d.location;
+            document.getElementById('status').value = d.status;
+            document.getElementById('amt').value = d.amount;
+            editIdx = id;
+            editCloudRow = { receipt: d.receipt, plate: d.plate, date: d.date };
+            document.getElementById('saveBtn').innerHTML = '<i class="fas fa-edit"></i> Update';
+            document.getElementById('inputFormCard').classList.add('editing-mode');
+            document.getElementById('inputFormCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('plate').focus();
+        }
+
+        function renderBin() {
+            let h = '';
+            bin.forEach((b, i) => {
+                h += `<tr>
+                    <td>${b.plate}</td>
+                    <td>${b.receipt || '-'}</td>
+                    <td><button onclick="restoreSingle(${i})" class="btn-action" style="padding:4px 10px; background:var(--success); color:white;">መልስ</button></td>
+                </tr>`;
+            });
+            document.getElementById('binItems').innerHTML = h || '<tr><td colspan="3" style="padding:20px;">ቢን ባዶ ነው</td></tr>';
+        }
+
+        async function restoreSingle(i) {
+            let item = bin[i];
+            if (isDuplicate(item)) return alert("Duplicate!");
+            let tx = idb.transaction(['main', 'trash'], 'readwrite');
+            tx.objectStore('main').add(item);
+            tx.objectStore('trash').delete(item.id);
+            tx.oncomplete = async () => {
+                await syncFromIndexedDB();
+                showToast("✅ ተመልሷል");
+            };
+        }
+
+        async function bulkDelete() {
+            let f = parseInt(document.getElementById('bFrom').value);
+            let t = parseInt(document.getElementById('bTo').value);
+            if (isNaN(f) || isNaN(t) || f < 1 || t > db.length) return alert("ትክክለኛ ቁጥር አስገባ!");
+            if (!confirm("እርግጠኛ ነህ?")) return;
+            let tx = idb.transaction(['main', 'trash'], 'readwrite');
+            for (let i = f - 1; i < t; i++) {
+                tx.objectStore('trash').add(db[i]);
+                tx.objectStore('main').delete(db[i].id);
+            }
+            tx.oncomplete = async () => {
+                await syncFromIndexedDB();
+                document.getElementById('bFrom').value = "";
+                document.getElementById('bTo').value = "";
+                showToast("🗑️ ተሰርዟል");
+            };
+        }
+
+        async function emptyBin() {
+            if (!confirm("እርግጠኛ ነህ?")) return;
+            let tx = idb.transaction('trash', 'readwrite');
+            tx.objectStore('trash').clear();
+            tx.oncomplete = async () => {
+                await syncFromIndexedDB();
+                showToast("🗑️ ቢን ባዶ ሆኗል");
+            };
+        }
+
+        async function bulkRestore() {
+            if (bin.length === 0) { alert("ቢን ባዶ ነው"); return; }
+            let tx = idb.transaction(['main', 'trash'], 'readwrite');
+            let dup = false;
+            for (let b of bin) {
+                if (!isDuplicate(b)) { tx.objectStore('main').add(b); tx.objectStore('trash').delete(b.id); }
+                else dup = true;
+            }
+            tx.oncomplete = async () => {
+                await syncFromIndexedDB();
+                if (dup) alert("አንዳንድ ድግግሞሾች ቀርተዋል");
+                showToast("✅ ተመልሰዋል");
+            };
+        }
+
+        function toggleBin() {
+            let s = document.getElementById('binDisplay').style;
+            s.display = (s.display === 'none' || s.display === '') ? 'block' : 'none';
+        }
+
+        function exportExcel() {
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(db), "Data");
+            XLSX.writeFile(wb, "SystemElite.xlsx");
+        }
+
+        function generateExcelReport() {
+            showLoadingOverlay(true);
+            try {
+                const rt = document.getElementById('excelReportType').value;
+                const di = getExcelDateString();
+                let data = filterDataByPeriod(db, rt, di);
+                if (data.length === 0) { alert("ምንም መረጃ አልተገኘም!"); showLoadingOverlay(false); return; }
+                let excelData = data.map((item, index) => ({
+                    'ተ.ቁ': index + 1, 'ደረሰኝ': item.receipt || '-', 'ሰሌዳ': item.plate || '-',
+                    'ዓይነት': item.vType || '-', 'ቀን': item.date || '-', 'ቦታ': item.location || '-',
+                    'ውጤት': item.status || '-', 'ብር': parseFloat(item.amount) || 0
+                }));
+                let wb = XLSX.utils.book_new();
+                let ws = XLSX.utils.json_to_sheet(excelData);
+                ws['!cols'] = [{ wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 12 }];
+                XLSX.utils.book_append_sheet(wb, ws, "Report");
+                let periodStr = "";
+                if (rt === 'day') periodStr = `${di.day}_${di.month}_${di.year}`;
+                else if (rt === 'month') periodStr = `${di.month}_${di.year}`;
+                else if (rt === 'year') periodStr = `${di.year}`;
+                else periodStr = "all";
+                XLSX.writeFile(wb, `Report_${periodStr}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                closeDialog('excelReportDialog');
+                showToast("✅ ኤክሴል ሪፖርት ተፈጥሯል!");
+            } catch (error) { console.error("ኤክሴል መፍጠር አልተሳካም:", error); alert("ኤክሴል መፍጠር አልተሳካም። እባክዎ እንደገና ይሞክሩ።"); }
+            finally { showLoadingOverlay(false); }
+        }
+
+        function getExcelDateString() {
+            let ethVis = document.getElementById('excEthPicker').style.display !== 'none';
+            if (ethVis) return { day: parseInt(document.getElementById('excEthDay').value), month: parseInt(document.getElementById('excEthMonth').value), year: parseInt(document.getElementById('excEthYear').value), type: 'eth' };
+            let dateStr = document.getElementById('excelReportDate').value;
+            if (dateStr) { let parts = dateStr.split('-'); return { dateStr: dateStr, day: parseInt(parts[2]), month: parseInt(parts[1]), year: parseInt(parts[0]), type: 'greg' }; }
+            return { type: 'eth' };
+        }
+
+        function sendEmailWithExcel() {
+            const emailTo = document.getElementById('emailTo').value;
+            const emailSubject = document.getElementById('emailSubject').value;
+            if (!emailTo || !emailSubject) { alert("እባክዎ ኢሜይል አድራሻ እና ርዕስ ይሙሉ"); return; }
+            showLoadingOverlay(true);
+            try {
+                const rt = document.getElementById('emailReportType').value;
+                const di = getEmailDateString();
+                let data = filterDataByPeriod(db, rt, di);
+                if (data.length === 0) { alert("ምንም መረጃ አልተገኘም!"); showLoadingOverlay(false); return; }
+                let excelData = data.map((item, index) => ({
+                    'ተ.ቁ': index + 1, 'ደረሰኝ': item.receipt || '-', 'ሰሌዳ': item.plate || '-',
+                    'ዓይነት': item.vType || '-', 'ቀን': item.date || '-', 'ቦታ': item.location || '-',
+                    'ውጤት': item.status || '-', 'ብር': parseFloat(item.amount) || 0
+                }));
+                let wb = XLSX.utils.book_new();
+                let ws = XLSX.utils.json_to_sheet(excelData);
+                XLSX.utils.book_append_sheet(wb, ws, "Report");
+                let fileName = `Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                let totalVehicles = data.length;
+                let totalAmount = data.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+                let body = `ከሲስተም የተላከ ሪፖርት\n\nጠቅላላ ተሽከርካሪ: ${totalVehicles}\nጠቅላላ ገቢ: ${totalAmount.toLocaleString()} ብር\n\nኤክሴል ፋይል በዚህ ኢሜይል ተያይዟል።`;
+                window.location.href = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(body)}`;
+                closeDialog('emailDialog');
+                showToast("✅ ኤክሴል ተፈጥሯል እና ለማውረድ ዝግጁ ነው!");
+            } catch (error) { console.error("ኤክሴል መፍጠር አልተሳካም:", error); alert("ኤክሴል መፍጠር አልተሳካም። እባክዎ እንደገና ይሞክሩ።"); }
+            finally { showLoadingOverlay(false); }
+        }
+
+        function getEmailDateString() {
+            let ethVis = document.getElementById('emEthPicker').style.display !== 'none';
+            if (ethVis) return { day: parseInt(document.getElementById('emEthDay').value), month: parseInt(document.getElementById('emEthMonth').value), year: parseInt(document.getElementById('emEthYear').value), type: 'eth' };
+            let dateStr = document.getElementById('emailReportDate').value;
+            if (dateStr) { let parts = dateStr.split('-'); return { dateStr: dateStr, day: parseInt(parts[2]), month: parseInt(parts[1]), year: parseInt(parts[0]), type: 'greg' }; }
+            return { type: 'eth' };
+        }
+
+        function importExcel(e) {
+            let file = e.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    let wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    let jd = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                    let tx = idb.transaction('main', 'readwrite');
+                    let store = tx.objectStore('main');
+                    let added = 0;
+                    for (let item of jd) {
+                        let rawDate = String(item.date || item['ቀን'] || "");
+                        let displayDate = formatDisplayDate(rawDate);
+                        let amountValue = item.amount;
+                        if (amountValue === undefined || amountValue === null) amountValue = item.Amount;
+                        if (amountValue === undefined || amountValue === null) amountValue = item.AMOUNT;
+                        if (amountValue === undefined || amountValue === null) amountValue = item['ብር'];
+                        let amountNum = 0;
+                        if (amountValue !== undefined && amountValue !== null) {
+                            let amountStr = String(amountValue).trim().replace(/,/g, '');
+                            amountNum = parseFloat(amountStr);
+                            if (isNaN(amountNum)) amountNum = 0;
+                        }
+                        let ni = {
+                            receipt: sanitizeInput(item.receipt || item['ደረሰኝ'] || ""),
+                            plate: sanitizeInput(item.plate || item['ሰሌዳ'] || ""),
+                            vType: sanitizeInput(item.vType || item['ዓይነት'] || ""),
+                            date: displayDate,
+                            location: String(item.location || item['ቦታ'] || "").trim(),
+                            status: String(item.status || item['ምርመራ'] || ""),
+                            amount: amountNum
+                        };
+                        if (ni.plate && !isDuplicate(ni)) { store.add(ni); added++; }
+                    }
+                    tx.oncomplete = async () => { await syncFromIndexedDB(); alert(`📥 ${added} መረጃዎች ተጨምረዋል`); };
+                } catch (error) { console.error("ኤክሴል ማስገባት አልተሳካም:", error); alert("ኤክሴል ፋይሉን ማንበብ አልተሳካም። እባክዎ ፋይሉ ትክክል መሆኑን ያረጋግጡ።"); }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function localBackup() {
+            let a = document.createElement('a');
+            a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+            a.download = "backup_" + new Date().toISOString() + ".json";
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+
+        function showExcelReportDialog() { document.getElementById('excelReportDialog').style.display = 'block'; }
+        function showEmailDialog() { document.getElementById('emailDialog').style.display = 'block'; }
+
+        function showLoginLogs() {
+            const logs = loginLogs;
+            let h = '<table style="width:100%; border-collapse:collapse; font-size:12px;">';
+            h += '<tr style="background:#004d40; color:white;"><th style="padding:8px;">ሰዓት</th><th style="padding:8px;">ተጠቃሚ</th><th style="padding:8px;">ሁኔታ</th></tr>';
+            logs.forEach((l, i) => {
+                let t = new Date(l.time);
+                let ts = t.toLocaleDateString('en-GB') + ' ' + t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                let color = l.status === 'success' ? 'green' : 'red';
+                let icon = l.status === 'success' ? '✓' : '✗';
+                h += `<tr style="background:${i % 2 ? '#f0f0f0' : '#fff'};">
+                    <td style="padding:6px; font-size:11px;">${ts}</td>
+                    <td style="padding:6px; font-weight:600;">${l.username}</td>
+                    <td style="padding:6px; color:${color}; font-weight:bold;">${icon}</td>
+                </tr>`;
+            });
+            h += '</table>';
+            document.getElementById('loginLogsContent').innerHTML = h;
+            document.getElementById('loginLogsDialog').style.display = 'block';
+        }
+
+        function showLoadingOverlay(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function filterDataByPeriod(data, rt, di) {
+            if (rt === 'all') return data;
+            return data.filter(item => {
+                if (!item.date) return false;
+                let p = parseEthDateStr(item.date);
+                if (!p) return false;
+                if (di.type === 'eth') {
+                    if (rt === 'day') return p.day === di.day && p.month === di.month && p.year === di.year;
+                    if (rt === 'month') return p.month === di.month && p.year === di.year;
+                    if (rt === 'year') return p.year === di.year;
+                } else {
+                    let g = ethToGreg(p.day, p.month, p.year);
+                    if (rt === 'day') return g.day === di.day && g.month === di.month && g.year === di.year;
+                    if (rt === 'month') return g.month === di.month && g.year === di.year;
+                    if (rt === 'year') return g.year === di.year;
+                }
+                return true;
+            });
+        }
+
+        document.addEventListener('keydown', function (e) { if (e.key === 'Enter' && document.getElementById('loginArea').style.display !== 'none') login(); });
+        document.getElementById('sDateFrom').addEventListener('input', refresh);
+        document.getElementById('sDateTo').addEventListener('input', refresh);
+
+        // ከዚህ በታች ያለውን የPWA ኢንስቶሌሽን ኮድ ይጨምሩ
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('installBtn');
+            installBtn.style.display = 'flex';
+            installBtn.onclick = async () => {
+                installBtn.style.display = 'none';
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                }
+            };
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW failed', err));
+        }
+    </script>
+</body>
+
+</html>
