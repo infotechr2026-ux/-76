@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#004d40">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Elite Payment">
+  <title>ክፍያ ማስገቢያ</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      font-family: 'Segoe UI', 'Nyala', 'Roboto', sans-serif;
+      background: #eef2f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      padding: 24px;
+      width: 100%;
+      max-width: 420px;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+    .card i.fa-money-bill-wave { font-size: 2.5rem; color: #004d40; display: block; text-align: center; margin-bottom: 10px; }
+    h2 { color: #004d40; text-align: center; margin-bottom: 5px; }
+    .form-group { margin-bottom: 15px; }
+    label { font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 5px; color: #37474f; }
+    label.required::after { content: ' *'; color: #d32f2f; }
+    input, select {
+      width: 100%; padding: 12px; border: 2px solid #e0e0e0;
+      border-radius: 12px; font-size: 16px; background: #fafafa;
+    }
+    input:focus, select:focus { border-color: #004d40; outline: none; background: white; }
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      font-weight: 700; font-size: 1rem; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; gap: 8px; color: white;
+      margin-top: 12px; transition: transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #004d40; }
+    .btn-warning { background: #f57c00; }
+    .btn-danger { background: #d32f2f; }
+    .scan-area {
+      border: 3px dashed #004d40; border-radius: 16px; padding: 18px;
+      text-align: center; cursor: pointer; margin: 15px 0;
+      background: #e0f2f1; transition: background 0.2s;
+    }
+    .scan-area:hover { background: #b2dfdb; }
+    .scan-area i { font-size: 2rem; color: #004d40; }
+    #preview { width: 100%; max-height: 180px; object-fit: contain; display: none; border-radius: 12px; margin-top: 10px; }
+    .ocr-result { background: #e8f5e9; border-left: 5px solid #2e7d32; padding: 15px; border-radius: 12px; margin: 10px 0; display: none; }
+    .ocr-result.show { display: block; }
+    .ocr-result.error-box { background: #ffebee; border-left-color: #d32f2f; }
+    .detected-amount { font-size: 2rem; font-weight: 900; color: #2e7d32; }
+    .status-badge {
+      background: #fff3e0; color: #f57c00; padding: 6px 12px;
+      border-radius: 20px; font-size: 0.85rem; text-align: center; margin-bottom: 12px;
+    }
+    .fee-info {
+      font-size: 0.8rem; color: #555; background: #f1f8e9; padding: 8px; border-radius: 8px; margin: 8px 0;
+    }
+    .hidden { display: none !important; }
+    #loginBox input { margin-bottom: 15px; }
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: #333; color: white; padding: 12px 24px; border-radius: 12px;
+      z-index: 9999; font-weight: 500; white-space: nowrap;
+      visibility: hidden; animation: fadeIn 0.3s;
+    }
+    .toast.show { visibility: visible; }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+
+  <!-- Login Screen -->
+  <div id="loginScreen" class="card">
+    <i class="fas fa-shield-halved fa-3x" style="color:#004d40; margin-bottom:15px;"></i>
+    <h2>መግቢያ</h2>
+    <div class="form-group">
+      <input type="text" id="username" placeholder="የተጠቃሚ ስም">
+    </div>
+    <div class="form-group">
+      <input type="password" id="password" placeholder="የይለፍ ቃል">
+    </div>
+    <button class="btn btn-primary" onclick="login()"><i class="fas fa-sign-in-alt"></i> ግባ</button>
+  </div>
+
+  <!-- Main Payment App -->
+  <div id="appScreen" class="card hidden">
+    <i class="fas fa-money-bill-wave"></i>
+    <h2>ክፍያ ጨምር</h2>
+    <div class="status-badge">
+      <i class="fas fa-exclamation-triangle"></i> ችግር ያለበት (Fail) ብቻ ክፍያ ይከፈላል
+    </div>
+
+    <div class="form-group">
+      <label class="required">የተሽከርካሪ ሰሌዳ</label>
+      <input type="text" id="plate" placeholder="ለምሳሌ AMA3-17796" required>
+    </div>
+    <div class="form-group">
+      <label class="required">የምርመራ ቀን</label>
+      <input type="text" id="date" placeholder="04/07/2018" required oninput="updateFee()">
+    </div>
+    <div class="form-group">
+      <label class="required">የተሽከርካሪ ዓይነት</label>
+      <select id="vTypeSel" onchange="updateFee()"></select>
+    </div>
+    <div class="form-group">
+      <label>ቦታ</label>
+      <select id="location">
+        <option value="ሰቲት">ሰቲት</option>
+        <option value="ወልቃይት">ወልቃይት</option>
+        <option value="ዳንሻ">ዳንሻ</option>
+        <option value="ጠገዴ">ጠገዴ</option>
+        <option value="ዞን">ዞን</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="required">የምርመራ ውጤት</label>
+      <select id="status">
+        <option value="ችግር ያለበት" selected>ችግር ያለበት (Fail)</option>
+        <option value="ችግር የለበትም">ችግር የለበትም (Pass)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="required">የክፍያ መጠን (ብር)</label>
+      <input type="number" id="amount" value="400" step="10" required>
+      <div id="feeInfo" class="fee-info hidden"></div>
+    </div>
+
+    <!-- OCR Scan Area -->
+    <div class="scan-area" onclick="document.getElementById('ocrInput').click()">
+      <i class="fas fa-camera"></i>
+      <p>ደረሰኝ ስካን ያድርጉ</p>
+      <small>የብር መጠን ብቻ ይነበባል</small>
+      <input type="file" id="ocrInput" hidden accept="image/*" onchange="handleOCR(this)">
+      <img id="preview" alt="Preview">
+    </div>
+    <div id="ocrResult" class="ocr-result"></div>
+
+    <button class="btn btn-primary" onclick="processPayment()"><i class="fas fa-check-circle"></i> አረጋግጥና ክፍያ ጨምር</button>
+    <button class="btn btn-warning" onclick="resetForm()"><i class="fas fa-undo"></i> ሪሴት</button>
+    <button class="btn btn-danger" onclick="logout()"><i class="fas fa-power-off"></i> ውጣ</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+  <script>
+    // ==================== ETHIOPIAN CALENDAR (for business day calculation) ====================
+    const ethMonths = [
+      { name: "መስከረም", days: 30 }, { name: "ጥቅምት", days: 30 }, { name: "ኅዳር", days: 30 }, { name: "ታኅሣሥ", days: 30 },
+      { name: "ጥር", days: 30 }, { name: "የካቲት", days: 30 }, { name: "መጋቢት", days: 30 }, { name: "ሚያዝያ", days: 30 },
+      { name: "ግንቦት", days: 30 }, { name: "ሰኔ", days: 30 }, { name: "ሐምሌ", days: 30 }, { name: "ነሐሴ", days: 30 },
+      { name: "ጳጉሜን", days: 5 }
+    ];
+    function isEthLeapYear(y) { return (y % 4) === 3; }
+    function getEthMonthDays(mi, y) { return mi === 12 ? (isEthLeapYear(y) ? 6 : 5) : 30; }
+    function ethToJDN(d, m, y) { return 1724221 + 365 * (y - 1) + Math.floor(y / 4) + 30 * m + d - 31; }
+    function jdnToGreg(jdn) {
+      let l = jdn + 68569, n = Math.floor(4 * l / 146097);
+      l -= Math.floor((146097 * n + 3) / 4);
+      let i = Math.floor(4000 * (l + 1) / 1461001);
+      l = l - Math.floor(1461 * i / 4) + 31;
+      let j = Math.floor(80 * l / 2447), day = l - Math.floor(2447 * j / 80);
+      l = Math.floor(j / 11);
+      return { year: 100 * (n - 49) + i + l, month: j + 2 - 12 * l, day };
+    }
+    function ethToGreg(d, m, y) { return jdnToGreg(ethToJDN(d, m, y)); }
+    function gregToJDN(y, m, d) {
+      let a = Math.floor((14 - m) / 12), yr = y + 4800 - a, mo = m + 12 * a - 3;
+      return d + Math.floor((153 * mo + 2) / 5) + 365 * yr + Math.floor(yr / 4) - Math.floor(yr / 100) + Math.floor(yr / 400) - 32045;
+    }
+
+    function businessDaysFromEthDate(ethDateStr) {
+      // ethDateStr format: DD/MM/YYYY
+      const parts = ethDateStr.split('/');
+      if (parts.length !== 3) return 0;
+      const d = parseInt(parts[0]), m = parseInt(parts[1]), y = parseInt(parts[2]);
+      if (isNaN(d) || isNaN(m) || isNaN(y)) return 0;
+      const greg = ethToGreg(d, m, y);
+      const start = new Date(greg.year, greg.month - 1, greg.day);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      let count = 0;
+      let cur = new Date(start);
+      cur.setDate(cur.getDate() + 1); // start counting after inspection day
+      while (cur <= today) {
+        const dow = cur.getDay(); // 0=Sun, 1=Mon,...,5=Fri,6=Sat
+        if (dow !== 0 && dow !== 6) count++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return count;
+    }
+
+    // ==================== VEHICLE TYPE & FEE SCHEDULE ====================
+    const vehicleFeeData = {
+      '2.3.1': { text: 'ለባለሁለት እና ሦሥት እግር ተሸከርካሪ ምርመራ፣(ሞተር፣ባጃጅ)', fees: [400, 600, 800] },
+      '2.3.2': { text: 'እስከ 11 ሰው መቀመጫ ያላቸው ተሸከርካሪ ምርመራ፣(አነስተኛ)', fees: [600, 800, 1000] },
+      '2.3.3': { text: 'ከ12 እስከ 44 መቀመጫ ያላቸው ተሸከርካሪ ምርመራ፣(መለስተኛ)', fees: [800, 1000, 1200] },
+      '2.3.4': { text: '45 ሰውና በላይ መቀመጫ ያላቸው ተሸከርካሪ ምርመራ፣(ባስ/ከፍተኛ)', fees: [1000, 1200, 1500] },
+      '2.3.5': { text: 'እስከ 35 ኩንታል የሚጭን ተሸከርካሪ ምርመራ፣(ደረቅ1)', fees: [800, 1000, 1200] },
+      '2.3.6': { text: 'ከ36 እስከ 70 ኩንታል የሚጭን ተሸከርካሪ ምርመራ፣(ደረቅ 2)', fees: [1000, 1200, 2000] },
+      '2.3.7': { text: 'ከ71 እስከ 150 ኩንታል የሚጭን ተሸከርካሪ ምርመራ፣(ደረቅ 3)', fees: [1000, 2500, 3500] },
+      '2.3.8': { text: 'ከ150 ኩንታል በላይ የሚጭን ተሸከርካሪ ምርመራ፣(ከባድ)', fees: [1500, 3000, 4000] },
+      '2.3.9': { text: 'እስከ 18000 ሊትር ፈሳሽ የሚጭን ተሸከርካሪ ምርመራ፣(ፈሳሽ)', fees: [1000, 2500, 3500] }
+    };
+
+    // Populate vehicle type select
+    function populateVehicleTypes() {
+      const sel = document.getElementById('vTypeSel');
+      sel.innerHTML = '';
+      for (const [key, val] of Object.entries(vehicleFeeData)) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = val.text;
+        sel.appendChild(opt);
+      }
+    }
+
+    // Auto-calculate fee based on vehicle type and business days
+    function updateFee() {
+      const type = document.getElementById('vTypeSel').value;
+      const dateStr = document.getElementById('date').value.trim();
+      const amountInput = document.getElementById('amount');
+      const infoDiv = document.getElementById('feeInfo');
+
+      if (!type || !dateStr) return;
+
+      const days = businessDaysFromEthDate(dateStr);
+      const fees = vehicleFeeData[type].fees;
+      let fee;
+      let rangeText;
+      if (days <= 7) {
+        fee = fees[0];
+        rangeText = `0–7 የስራ ቀናት (${days} ቀን)`;
+      } else if (days <= 15) {
+        fee = fees[1];
+        rangeText = `8–15 የስራ ቀናት (${days} ቀን)`;
+      } else {
+        fee = fees[2];
+        rangeText = `ከ15 በላይ የስራ ቀናት (${days} ቀን)`;
+      }
+      amountInput.value = fee;
+      infoDiv.classList.remove('hidden');
+      infoDiv.innerHTML = `📅 ${rangeText} → ብር ${fee} (የ"${vehicleFeeData[type].text}" አይነት)`;
+    }
+
+    // ==================== CONFIGURATION ====================
+    const DB_NAME = 'TECH_SYSTEM_DB';
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbwzEJO_ilGL8sqFs4JqBhrc7ZyBq7LlRYaqurx0a4cp9UwntfVTr7CdM8ynn3O1gdbIAw/exec";
+    let db, allRecords = [];
+
+    // ==================== UTILITY ====================
+    function showToast(msg, isGood = true) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.background = isGood ? '#2e7d32' : '#d32f2f';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // ==================== INDEXEDDB ====================
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const d = e.target.result;
+          if (!d.objectStoreNames.contains('main')) d.createObjectStore('main', { keyPath: 'id', autoIncrement: true });
+          if (!d.objectStoreNames.contains('trash')) d.createObjectStore('trash', { keyPath: 'id', autoIncrement: true });
+        };
+        req.onsuccess = (e) => { db = e.target.result; resolve(); };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function loadRecords() {
+      if (!db) await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('main', 'readonly');
+        const store = tx.objectStore('main');
+        const get = store.getAll();
+        get.onsuccess = () => { allRecords = get.result || []; resolve(allRecords); };
+      });
+    }
+
+    function normalizePlate(p) { return (p||'').toString().trim().toUpperCase().replace(/-/g,'').replace(/\s/g,''); }
+    function normalizeDate(d) {
+      if(!d) return '';
+      return d.toString().trim().split('(')[0].replace(/\s/g,'').replace(/ዓ\.ም/g,'');
+    }
+
+    function findRecord(plate, date) {
+      const np = normalizePlate(plate), nd = normalizeDate(date);
+      return allRecords.find(r => normalizePlate(r.plate) === np && normalizeDate(r.date) === nd);
+    }
+
+    // ==================== DATABASE WRITE ====================
+    async function updateOrCreateRecord(plate, date, amount, location, status, vType) {
+      if (!db) await openDB();
+      await loadRecords();
+      const existing = findRecord(plate, date);
+      const tx = db.transaction('main', 'readwrite');
+      const store = tx.objectStore('main');
+      return new Promise((resolve, reject) => {
+        if (existing) {
+          const old = parseFloat(existing.amount) || 0;
+          existing.amount = old + amount;
+          existing.location = location || existing.location;
+          existing.status = status || existing.status;
+          existing.vType = vType || existing.vType;
+          store.put(existing);
+        } else {
+          const rec = {
+            plate, date: `${date} (ከክፍያ)`, amount, location, status,
+            receipt: '', vType: vType || ''
+          };
+          store.add(rec);
+        }
+        tx.oncomplete = () => {
+          localStorage.setItem('payment_updated', Date.now().toString());
+          resolve(true);
+        };
+        tx.onerror = () => reject(false);
+      });
+    }
+
+    // ==================== CLOUD SYNC ====================
+    async function syncToCloud(entry) {
+      if (!navigator.onLine) return;
+      try {
+        await fetch(SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operation: 'add', data: [entry] })
+        });
+      } catch(e) {}
+    }
+
+    // ==================== OCR ====================
+    let ocrAmount = null;
+    async function handleOCR(input) {
+      const file = input.files[0];
+      if (!file) return;
+      showToast('በመተንተን ላይ...');
+      document.getElementById('preview').src = URL.createObjectURL(file);
+      document.getElementById('preview').style.display = 'block';
+      try {
+        const { data: { text } } = await Tesseract.recognize(file, 'eng+amh');
+        const m = text.match(/Deposited\s+Amount\s*[:]?\s*(\d{3,5})/i) || text.match(/(\d{3,5})\s*(ብር|ETB)/i);
+        const card = document.getElementById('ocrResult');
+        if (m) {
+          ocrAmount = parseInt(m[1]);
+          card.className = 'ocr-result show';
+          card.innerHTML = `
+            <div class="detected-amount">${ocrAmount} ብር</div>
+            <button class="btn btn-primary" onclick="useOcr()" style="margin-top:8px;">ይህን ተጠቀም</button>
+          `;
+          showToast(`💰 ${ocrAmount} ብር ተገኝቷል`);
+        } else {
+          card.className = 'ocr-result show error-box';
+          card.innerHTML = `
+            <p style="color:var(--danger); margin-bottom:8px;">⚠️ መጠን አልተገኘም</p>
+            <input type="number" id="manualOcrAmt" placeholder="ብር" value="400" style="width:100px;">
+            <button class="btn btn-primary" onclick="useManualOcr()" style="margin-top:8px;">አስገባ</button>
+          `;
+          showToast('OCR ማንበብ አልቻለም', false);
+        }
+      } catch(e) {
+        showToast('OCR ስህተት', false);
+      }
+    }
+
+    function useOcr() {
+      if (ocrAmount) {
+        document.getElementById('amount').value = ocrAmount;
+        showToast(`✅ ${ocrAmount} ብር ተቀናብሯል`);
+      }
+    }
+
+    function useManualOcr() {
+      const val = parseFloat(document.getElementById('manualOcrAmt')?.value);
+      if (val && val >= 50 && val <= 50000) {
+        document.getElementById('amount').value = val;
+        showToast(`✅ ${val} ብር ተቀናብሯል`);
+      } else {
+        showToast('ትክክለኛ መጠን ያስገቡ (50-50,000)', false);
+      }
+    }
+
+    // ==================== PAYMENT LOGIC ====================
+    async function processPayment() {
+      const plate = document.getElementById('plate').value.trim();
+      const date = document.getElementById('date').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const status = document.getElementById('status').value;
+      const location = document.getElementById('location').value;
+      const vType = document.getElementById('vTypeSel').value;
+
+      if (!plate || !date || isNaN(amount) || amount < 50) {
+        showToast('እባክዎ ሁሉንም ያስገቡ (ሰሌዳ፣ ቀን፣ ብር > 50)', false);
+        return;
+      }
+      if (!vType) {
+        showToast('የተሽከርካሪ ዓይነት ይምረጡ', false);
+        return;
+      }
+      if (status !== "ችግር ያለበት") {
+        showToast('⚠️ "Pass" ተሽከርካሪዎች ክፍያ አይከፍሉም', false);
+        return;
+      }
+
+      await loadRecords();
+      const existing = findRecord(plate, date);
+      const oldAmount = existing ? (parseFloat(existing.amount) || 0) : 0;
+      const newTotal = oldAmount + amount;
+
+      let msg = `ሰሌዳ: ${plate}\nቀን: ${date}\n`;
+      if (existing) msg += `ቀድሞ የተከፈለ: ${oldAmount} ብር\n`;
+      msg += `አዲስ ክፍያ: ${amount} ብር\nአጠቃላይ: ${newTotal} ብር\n\nእርግጠኛ ነዎት?`;
+      if (!confirm(msg)) return;
+
+      try {
+        await updateOrCreateRecord(plate, date, amount, location, status, vType);
+        showToast('✅ ክፍያ ተመዝግቧል');
+
+        await loadRecords();
+        const updatedRecord = findRecord(plate, date);
+        if (updatedRecord) {
+          syncToCloud(updatedRecord).then(() => {
+            showToast('☁️ ወደ ጎግል ሺት ተልኳል');
+          }).catch(() => {});
+        }
+        resetForm();
+      } catch(e) {
+        showToast('ስህተት ተከስቷል፣ እባክዎ እንደገና ይሞክሩ', false);
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('plate').value = '';
+      document.getElementById('date').value = '';
+      document.getElementById('amount').value = '400';
+      document.getElementById('status').value = 'ችግር ያለበት';
+      document.getElementById('location').value = 'ሰቲት';
+      document.getElementById('preview').style.display = 'none';
+      document.getElementById('ocrResult').className = 'ocr-result';
+      document.getElementById('feeInfo').classList.add('hidden');
+      ocrAmount = null;
+    }
+
+    // ==================== AUTH ====================
+    function login() {
+      const name = document.getElementById('username').value.trim().toLowerCase();
+      const pass = document.getElementById('password').value;
+      const users = JSON.parse(localStorage.getItem('TECH_SYSTEM_USERS') || '[]');
+      const user = users.find(u => u.name === name);
+      if (!user) { showToast('ተጠቃሚ አልተገኘም', false); return; }
+
+      try {
+        let isValid = false;
+        if (typeof bcrypt !== 'undefined' && bcrypt.compareSync) {
+          isValid = bcrypt.compareSync(pass, user.passHash);
+        } else {
+          isValid = (pass === user.passHash);
+        }
+        if (isValid) {
+          sessionStorage.setItem('payLogged', '1');
+          document.getElementById('loginScreen').classList.add('hidden');
+          document.getElementById('appScreen').classList.remove('hidden');
+          if (user.location) document.getElementById('location').value = user.location;
+          showToast('እንኳን ደህና መጡ');
+        } else {
+          showToast('የይለፍ ቃል ትክክል አይደለም', false);
+        }
+      } catch(e) {
+        showToast('ማረጋገጥ አልተሳካም', false);
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('payLogged');
+      document.getElementById('appScreen').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+    }
+
+    // ==================== INITIALIZATION ====================
+    (async () => {
+      await openDB();
+      await loadRecords();
+      populateVehicleTypes();
+      if (sessionStorage.getItem('payLogged') === '1') {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appScreen').classList.remove('hidden');
+      }
+    })();
+  </script>
+</body>
+</html>
