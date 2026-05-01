@@ -261,6 +261,11 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             font-size: 14px;
             line-height: 1.6;
+            display: none;
+        }
+
+        .receipt-card.show {
+            display: block;
         }
 
         .receipt-card h4 {
@@ -290,6 +295,49 @@
             min-width: 120px;
             padding: 10px;
             font-size: 0.9rem;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h3 {
+            color: #004d40;
+            margin-bottom: 20px;
+        }
+
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-modal:hover {
+            color: #333;
         }
     </style>
 </head>
@@ -348,9 +396,14 @@
         <button class="btn btn-primary" onclick="processPayment()"><i class="fas fa-check-circle"></i> ክፍያ ጨምር</button>
         <button class="btn btn-warning" onclick="resetForm()"><i class="fas fa-undo"></i> ሪሴት</button>
         <button class="btn btn-danger" onclick="logout()"><i class="fas fa-power-off"></i> ውጣ</button>
+    </div>
 
-        <!-- የደረሰኝ ካርድ (ክፍያ ከተከፈለ በኋላ ይታያል) -->
-        <div id="receiptCard" class="receipt-card hidden"></div>
+    <!-- ደረሰኝ ሞዳል -->
+    <div id="receiptModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeReceiptModal()">&times;</span>
+            <div id="receiptCard" class="receipt-card show"></div>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
@@ -391,6 +444,18 @@
             return { year: 100 * (n - 49) + i + l, month: j + 2 - 12 * l, day };
         }
         function ethToGreg(d, m, y) { return jdnToGreg(ethToJDN(d, m, y)); }
+        function gregToEth(y, m, d) {
+            const jdn = Math.floor((y + Math.floor((m - 14) / 12)) * 365.25) + Math.floor(30.6001 * ((m % 12) + 1)) + d + 1720995;
+            const r = jdn - 1724221;
+            const n = Math.floor(r / 146097);
+            const rem = r % 146097;
+            const y_part = Math.floor(rem / 365.25);
+            const d_part = (rem % 365.25);
+            const year = n * 400 + y_part + 1;
+            const m_part = Math.floor(d_part / 30);
+            const day = Math.floor(d_part % 30) + 1;
+            return { year, month: m_part + 1, day };
+        }
         function businessDaysFromEthDate(ethDateStr) {
             const parts = ethDateStr.split('/'); if (parts.length !== 3) return 0;
             const d = parseInt(parts[0]), m = parseInt(parts[1]), y = parseInt(parts[2]);
@@ -544,7 +609,7 @@
 
             if (!plate || !date || isNaN(amount) || amount < 50) { showToast('ሁሉንም ያስገቡ', false); return; }
             if (!vType) { showToast('የተሽከርካሪ ዓይነት ይምረጡ', false); return; }
-            if (status !== "ችግር ያለበት") { showToast('Pass አይከፍልም', false); return; }
+            if (status !== "ችግር ያለበት") { showToast('Pass አይከፈልም', false); return; }
 
             await loadRecords();
             const existing = findRecord(plate, date);
@@ -558,12 +623,14 @@
                 await loadRecords();
                 const saved = findRecord(plate, date);
                 if (saved) syncToCloud(saved).then(() => showToast('☁️ ወደ ጎግል ሺት ተልኳል')).catch(() => { });
-                showReceipt({ plate, date, amount, location, vType: vehicleFeeData[vType].text, total: newTotal });
+                
+                // ደረሰኝ በሞዳል ውስጥ ያሳይ - ወደ form ሳይምለስ
+                showReceiptModal({ plate, date, amount, location, vType: vehicleFeeData[vType].text, total: newTotal });
             } catch (e) { showToast('ስህተት ተከስቷል', false); }
         }
 
-        // ==================== ደረሰኝ ማመንጨት ====================
-        function showReceipt(payment) {
+        // ==================== ደረሰኝ ሞዳል ====================
+        function showReceiptModal(payment) {
             const card = document.getElementById('receiptCard');
             const todayEth = gregToEth(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
             const receiptDate = `${todayEth.day}/${todayEth.month}/${todayEth.year}`;
@@ -592,8 +659,11 @@
         </div>
       `;
             card.innerHTML = html;
-            card.classList.remove('hidden');
-            card.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('receiptModal').classList.add('show');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receiptModal').classList.remove('show');
         }
 
         // ==================== ሼር ተግባራት ====================
@@ -671,7 +741,7 @@
             document.getElementById('preview').style.display = 'none';
             document.getElementById('ocrResult').className = 'ocr-result';
             document.getElementById('feeInfo').classList.remove('show');
-            document.getElementById('receiptCard').classList.add('hidden');
+            closeReceiptModal();
             ocrAmount = null;
         }
 
@@ -699,6 +769,7 @@
             document.getElementById('loginScreen').classList.remove('hidden');
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
+            closeReceiptModal();
         }
 
         (async () => {
