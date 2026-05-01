@@ -547,24 +547,27 @@
       
       function norm(s) { return (s||'').toString().trim().toUpperCase().replace(/[- ]/g, ''); }
       
-      function addPayment(plate, date, amt, loc, vType, vName) {
+      /**
+       * ክፍያ የሚጨምረው ሰሌዳ + ቀን ቀድሞ ካለ ብቻ ነው።
+       * @returns {boolean} ተዛማጅ ከተገኘ እና ከተሳካ true፣ ካልተገኘ false።
+       */
+      function addPaymentToExisting(plate, date, amt, loc, vType, vName) {
         const db = getDB();
         const np = norm(plate), nd = date.trim();
         const idx = db.findIndex(r => norm(r.plate) === np && r.date.trim() === nd);
         
         if (idx >= 0) {
-          db[idx].amount = (parseFloat(db[idx].amount)||0) + amt;
+          // 🔒 ተዛማጅ አለ – መጠኑን ብቻ ጨምር
+          db[idx].amount = (parseFloat(db[idx].amount) || 0) + amt;
           db[idx].location = loc;
           db[idx].vType = vType;
           db[idx].vName = vName;
           db[idx].updated = new Date().toISOString();
+          saveDB(db);
+          return true;
         } else {
-          db.push({
-            plate, date, amount: amt, location: loc, vType, vName,
-            created: new Date().toISOString(), updated: new Date().toISOString()
-          });
+          return false; // መረጃው የለም
         }
-        saveDB(db);
       }
       
       function getTotal(plate, date) {
@@ -632,9 +635,6 @@
         
         feeInfo.innerHTML = '📅 የስራ ቀናት: <b>' + days + '</b> (' + range + ')<br>🚗 ዓይነት: <b>' + f.name + '</b><br>💰 ተመን: <b>' + amount.toLocaleString() + ' ብር</b>';
         feeInfo.classList.add('visible');
-        
-        // አውቶማቲክ ወደ ክፍያ ማስገቢያ አያያዝ
-        // መጠኑ በራስ-ሰር ተሰልቷል - ተጠቃሚው ማረጋገጥ ብቻ ያስፈልገዋል
       }
       
       typeEl.addEventListener('change', calcFee);
@@ -651,14 +651,23 @@
         if (!vType) { toast('ዓይነት ይምረጡ', 'error'); typeEl.focus(); return; }
         if (!currentFee) { toast('ቀንና ዓይነት ያረጋግጡ', 'error'); return; }
         
-        const vName = Fees[vType]?.name || vType;
+        // 1. መጀመሪያ ማች መኖሩን ፈትሽ
         const prev = getTotal(plate, date);
+        const found = prev > 0 || getDB().some(r => norm(r.plate) === norm(plate) && r.date.trim() === date.trim());
+        // (መረጃ ካለ getTotal >0 ወይም ዜሮ ሊሆን ይችላል፤ ቀዳሚ ሪከርድ መኖሩን በትክክል ማወቅ)
+        // ደህንነቱ የተጠበቀ ምርመራ በ addPaymentToExisting እንደሚሰራ እናስተማምን
+        // 2. ክፍያ ለማከል ሞክር
+        const vName = Fees[vType]?.name || vType;
+        const success = addPaymentToExisting(plate, date, currentFee, loc, vType, vName);
+        
+        if (!success) {
+          // ❌ ተዛማጅ አልተገኘም
+          toast('መረጃው በሲስተሙ ውስጥ የለም፤ እባክዎ የተሽከርካሪውን ሙሉ መረጃ ያስገቡ', 'error');
+          return;
+        }
+        
+        // ✅ ከተከፈለ በኋላ ደረሰኝ አሳይ
         const newTotal = prev + currentFee;
-        
-        if (!confirm('ሰሌዳ: ' + plate + '\nቀን: ' + date + '\nዓይነት: ' + vName + '\nቦታ: ' + loc + '\n\nቀዳሚ: ' + prev.toLocaleString() + ' ብር\nአሁን: ' + currentFee.toLocaleString() + ' ብር\nድምር: ' + newTotal.toLocaleString() + ' ብር\n\nእርግጠኛ ነዎት?')) return;
-        
-        addPayment(plate, date, currentFee, loc, vType, vName);
-        
         const eth = EthCal.todayEth();
         lastReceipt = {
           plate, date, amount: currentFee, total: newTotal,
@@ -693,6 +702,7 @@
         plateEl.focus();
       };
       
+      // WhatsApp, Telegram, Print ያልተቀየሩ ናቸው
       window.shareWhatsApp = function() {
         if (!lastReceipt) return;
         const m = '✅ *System 76*%0A' +
@@ -732,7 +742,7 @@
         w.document.close();
       };
       
-      console.log('🚗 System 76 ዝግጁ ነው - ራስ-ሰር ክፍያ ስሌት ንቁ ነው');
+      console.log('🚗 System 76 ዝግጁ ነው - ማች ካለ ብቻ ክፍያ ይጨምራል');
     })();
   </script>
 </body>
