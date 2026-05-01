@@ -3,18 +3,34 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <meta name="theme-color" content="#004d40">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Elite Inspection">
     <link rel="manifest" href="payment-manifest.json">
-    <title>ክፍያ ማስገቢያ + ደረሰኝ</title>
+    <title>SYSTEM ELITE v76.0 - አጥንክሮ የተሰራ</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
+        :root {
+            --primary: #004d40;
+            --secondary: #00796b;
+            --accent: #ffb300;
+            --danger: #ff1744;
+            --success: #00c853;
+            --info: #0288d1;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --glass: rgba(255, 255, 255, 0.95);
+            --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --emergency: #ff0000;
+            --duplicate: #2196F3;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -23,48 +39,15 @@
 
         body {
             font-family: 'Segoe UI', 'Nyala', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #004d40 0%, #00796b 50%, #00bfa5 100%);
-            background-size: 400% 400%;
-            animation: gradientBG 12s ease infinite;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 16px;
-            position: relative;
+            background: #eef2f7;
+            color: var(--dark);
+            overflow-x: hidden;
         }
 
-        @keyframes gradientBG {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-            padding: 30px 24px;
-            width: 100%;
-            max-width: 450px;
-            animation: fadeInUp 0.6s ease;
-            backdrop-filter: blur(10px);
-            position: relative;
-            z-index: 1;
-        }
-
-        @keyframes fadeInUp {
+        @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(10px);
             }
 
             to {
@@ -73,720 +56,786 @@
             }
         }
 
-        h2 {
-            color: #004d40;
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 200, 83, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 200, 83, 0);
+            }
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 23, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 23, 68, 0);
+            }
+        }
+
+        @keyframes emergencyBlink {
+
+            0%,
+            100% {
+                background: #ff0000;
+                color: white;
+            }
+
+            50% {
+                background: #ff6600;
+                color: white;
+            }
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .online {
+            background: #e8f5e9;
+            color: var(--success);
+            border: 1px solid var(--success);
+            animation: pulse-green 2s infinite;
+        }
+
+        .offline {
+            background: #ffebee;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            animation: pulse-red 2s infinite;
+        }
+
+        #loginArea {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top right, #00796b, #004d40);
+        }
+
+        .login-card {
+            background: var(--glass);
+            padding: 40px 30px;
+            border-radius: 35px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
             text-align: center;
-            margin-bottom: 8px;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.6s ease-out;
         }
 
-        .form-group {
-            margin-bottom: 16px;
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
         }
 
-        label {
-            font-weight: 600;
-            font-size: 0.9rem;
-            display: block;
-            margin-bottom: 6px;
-            color: #1e293b;
-        }
-
-        label.required::after {
-            content: ' *';
-            color: #d32f2f;
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #94a3b8;
+            background: none;
+            border: none;
+            padding: 5px;
         }
 
         input,
         select {
             width: 100%;
-            padding: 12px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 14px;
-            font-size: 16px;
-            background: #f9fafb;
-            transition: 0.3s;
+            padding: 12px 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: var(--transition);
+            background: white;
+            box-sizing: border-box;
         }
 
         input:focus,
         select:focus {
-            border-color: #004d40;
+            border-color: var(--secondary);
             outline: none;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(0, 77, 64, 0.1);
+            box-shadow: 0 0 0 2px rgba(155, 230, 222, 0.1);
         }
 
-        .btn {
-            width: 100%;
-            padding: 14px;
+        .btn-action {
+            padding: 12px 24px;
+            border-radius: 12px;
             border: none;
-            border-radius: 14px;
+            cursor: pointer;
             font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
+            transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            color: white;
-            margin-top: 14px;
-            transition: 0.2s;
-        }
-
-        .btn:active {
-            transform: scale(0.97);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #004d40, #00796b);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #f57c00, #ff9800);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #d32f2f, #e53935);
-        }
-
-        .scan-area {
-            border: 2px dashed #004d40;
-            border-radius: 16px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            margin: 18px 0;
-            background: rgba(0, 77, 64, 0.03);
-            transition: background 0.2s;
-        }
-
-        .scan-area:hover {
-            background: rgba(0, 77, 64, 0.08);
-        }
-
-        .scan-area i {
-            font-size: 2rem;
-            color: #004d40;
-        }
-
-        #preview {
-            width: 100%;
-            max-height: 180px;
-            object-fit: contain;
-            display: none;
-            border-radius: 14px;
-            margin-top: 12px;
-            border: 1px solid #ddd;
-        }
-
-        .ocr-result {
-            border-radius: 14px;
-            padding: 15px;
-            margin: 10px 0;
-            display: none;
-        }
-
-        .ocr-result.show {
-            display: block;
-        }
-
-        .ocr-result.success {
-            background: #e8f5e9;
-            border-left: 5px solid #2e7d32;
-        }
-
-        .ocr-result.error-box {
-            background: #ffebee;
-            border-left: 5px solid #d32f2f;
-        }
-
-        .detected-amount {
-            font-size: 2rem;
-            font-weight: 900;
-            color: #2e7d32;
-        }
-
-        .status-badge {
-            background: #fff3e0;
-            color: #f57c00;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            text-align: center;
-            margin-bottom: 16px;
-            font-weight: 600;
-        }
-
-        .fee-info {
-            font-size: 0.85rem;
-            color: #1e293b;
-            background: #e0f2f1;
-            padding: 10px;
-            border-radius: 10px;
-            margin: 10px 0;
-            display: none;
-        }
-
-        .fee-info.show {
-            display: block;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1e293b;
-            color: white;
-            padding: 14px 28px;
-            border-radius: 30px;
-            z-index: 9999;
-            font-weight: 600;
-            white-space: nowrap;
-            visibility: hidden;
-        }
-
-        .toast.show {
-            visibility: visible;
-        }
-
-        .receipt-card {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            font-size: 14px;
-            line-height: 1.6;
-            display: none;
-        }
-
-        .receipt-card.show {
-            display: block;
-        }
-
-        .receipt-card h4 {
-            color: #004d40;
-            margin-bottom: 12px;
-        }
-
-        .receipt-card table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .receipt-card td {
-            padding: 6px 4px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .share-btns {
-            display: flex;
-            flex-wrap: wrap;
             gap: 10px;
-            margin-top: 15px;
         }
 
-        .share-btns .btn {
-            flex: 1;
-            min-width: 120px;
-            padding: 10px;
-            font-size: 0.9rem;
+        .btn-action:active {
+            transform: scale(0.98);
         }
 
-        .modal-overlay {
+        .container {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9998;
-            justify-content: center;
-            align-items: center;
+            padding: 20px;
+            max-width: 1600px;
+            margin: auto;
+            animation: fadeIn 0.5s ease;
         }
 
-        .modal-overlay.show {
-            display: flex;
-        }
-
-        .modal-content {
+        .header-card {
             background: white;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 20px 25px;
+            border-radius: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
         }
 
-        .modal-content h3 {
-            color: #004d40;
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
             margin-bottom: 20px;
         }
 
-        .close-modal {
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #999;
+        .table-container {
+            overflow-x: auto;
+            border-radius: 15px;
         }
 
-        .close-modal:hover {
-            color: #333;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 15px;
+            color: #475569;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-box {
+            padding: 25px;
+            border-radius: 22px;
+            background: white;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+        }
+
+        .stat-val {
+            display: block;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 10px;
+        }
+
+        .stat-lbl {
+            color: #64748b;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background: #333;
+            color: white;
+            text-align: center;
+            border-radius: 12px;
+            padding: 16px;
+            position: fixed;
+            z-index: 10000;
+            bottom: 30px;
+            right: 30px;
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .lang-btn {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropbtn {
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: #ffffff;
+            min-width: 280px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            border-radius: 0 0 18px 18px;
+            padding: 15px;
+            z-index: 9999;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .dropdown-content button {
+            width: 100%;
+            text-align: left;
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .dropdown-content button:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        @media (max-width: 550px) {
+            .grid-4 {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .btn-action {
+                padding: 10px 16px;
+                font-size: 12px;
+            }
+
+            .header-card {
+                flex-direction: column;
+                text-align: center;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div id="toast" class="toast"></div>
+    <div id="toast">✅ መልዕክት</div>
 
-    <!-- መግቢያ -->
-    <div id="loginScreen" class="card">
-        <i class="fas fa-shield-halved fa-3x"
-            style="color:#004d40; margin-bottom:15px; display:block; text-align:center;"></i>
-        <h2>መግቢያ</h2>
-        <div class="form-group"><input type="text" id="username" placeholder="የተጠቃሚ ስም" autocomplete="off"></div>
-        <div class="form-group"><input type="password" id="password" placeholder="የይለፍ ቃል" autocomplete="off"></div>
-        <button class="btn btn-primary" onclick="login()"><i class="fas fa-sign-in-alt"></i> ግባ</button>
+    <div id="loginArea">
+        <div class="login-card">
+            <i class="fas fa-shield-halved fa-4x" style="color: var(--primary); margin-bottom: 20px;"></i>
+            <h1 style="margin: 0; color: var(--primary); font-size: 22px;">ኢንስፔክሽን ስራ ሂደት</h1>
+            <p style="color: #64748b; margin-bottom: 30px;">የቴክኒክ ምርመራ አስተዳደር ሲስተም</p>
+            <div class="input-group">
+                <input type="text" id="u" placeholder="የተጠቃሚ ስም" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <input type="password" id="p" placeholder="የይለፍ ቃል" autocomplete="off">
+                <button type="button" class="password-toggle" onclick="togglePasswordVisibility()">
+                    <i class="fas fa-eye" id="pwToggleIcon"></i>
+                </button>
+            </div>
+            <button class="btn-action" onclick="login()"
+                style="background: var(--primary); color: white; width: 100%; font-size: 17px;">
+                ሲስተም ግባ <i class="fas fa-sign-in-alt"></i>
+            </button>
+        </div>
     </div>
 
-    <!-- ዋናው ክፍያ አፕ -->
-    <div id="appScreen" class="card hidden">
-        <i class="fas fa-money-bill-wave fa-3x"
-            style="color:#004d40; display:block; text-align:center; margin-bottom:10px;"></i>
-        <h2>ክፍያ ጨምር</h2>
-        <div class="status-badge"><i class="fas fa-exclamation-triangle"></i> ችግር ያለበት (Fail) ብቻ ክፍያ ይከፈላል</div>
+    <div id="mainApp" class="container">
+        <div class="header-card">
+            <div>
+                <h2 style="margin:0; font-size: 20px;"><i class="fas fa-car-side"></i> Elite Inspection Pro</h2>
+                <div style="display:flex; gap:12px; margin-top:8px;">
+                    <div id="netStatus" class="status-indicator online"><i class="fas fa-circle"></i> <span
+                            id="netText">ኦንላይን</span></div>
+                    <span id="userBadge"
+                        style="background:#f1f5f9; padding:6px 14px; border-radius:10px; font-weight:700;"></span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="lang-btn" onclick="toggleLang('am')">AM</button>
+                <button class="lang-btn" onclick="toggleLang('en')">EN</button>
+                <div class="dropdown">
+                    <button class="dropbtn">ተግባራት <i class="fas fa-chevron-down"></i></button>
+                    <div class="dropdown-content">
+                        <button onclick="syncAllToCloud()"><i class="fas fa-cloud-upload-alt"></i> ወደ ክላውድ ላክ</button>
+                        <button onclick="exportExcel()"><i class="fas fa-file-export"></i> ኤክሴል አውርድ</button>
+                        <button onclick="localBackup()"><i class="fas fa-hdd"></i> ሎካል ባካፕ</button>
+                        <hr>
+                        <button onclick="logout()"><i class="fas fa-power-off"></i> ሲስተሙን ዝጋ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <div class="form-group"><label class="required">የተሽከርካሪ ሰሌዳ</label><input type="text" id="plate"
-                placeholder="AMA3-17796"></div>
-        <div class="form-group"><label class="required">የምርመራ ቀን</label><input type="text" id="date"
-                placeholder="04/07/2018" oninput="updateFee()"></div>
-        <div class="form-group"><label class="required">የተሽከርካሪ ዓይነት</label><select id="vTypeSel"
-                onchange="updateFee()"></select></div>
-        <div class="form-group"><label>ቦታ</label><select id="location">
-                <option value="ሰቲት">ሰቲት</option>
-                <option value="ወልቃይት">ወልቃይት</option>
-                <option value="ዳንሻ">ዳንሻ</option>
-                <option value="ጠገዴ">ጠገዴ</option>
-                <option value="ዞን">ዞን</option>
-            </select></div>
-        <div class="form-group"><label class="required">የምርመራ ውጤት</label><select id="status">
-                <option value="ችግር ያለበት" selected>Fail</option>
+        <!-- ፍለጋ ክፍል -->
+        <div class="card grid-4">
+            <input type="text" id="sPlate" placeholder="በሰሌዳ ፈልግ..." oninput="refresh()">
+            <input type="text" id="sReceipt" placeholder="በደረሰኝ ፈልግ..." oninput="refresh()">
+            <select id="sLoc" onchange="refresh()">
+                <option value="">ሁሉም ቦታ</option>
+                <option>ሰቲት</option>
+                <option>ወልቃይት</option>
+                <option>ዳንሻ</option>
+                <option>ጠገዴ</option>
+                <option>ዞን</option>
+            </select>
+            <select id="sStatus" onchange="refresh()">
+                <option value="">ሁሉንም ውጤት</option>
                 <option value="ችግር የለበትም">Pass</option>
-            </select></div>
-        <div class="form-group"><label class="required">የክፍያ መጠን (ብር)</label><input type="number" id="amount"
-                value="400" step="10">
-            <div id="feeInfo" class="fee-info"></div>
+                <option value="ችግር ያለበት">Fail</option>
+            </select>
         </div>
 
-        <div class="scan-area" onclick="document.getElementById('ocrInput').click()">
-            <i class="fas fa-camera"></i>
-            <p>ደረሰኝ ስካን ያድርጉ (OCR)</p>
-            <small>የብር መጠን ይነበባል</small>
-            <input type="file" id="ocrInput" hidden accept="image/*" onchange="handleOCR(this)">
-            <img id="preview">
+        <!-- ግቤት ቅጽ -->
+        <div id="inputFormCard" class="card grid-4" style="background: #f8fafc;">
+            <input id="receipt" placeholder="ደረሰኝ ቁ.">
+            <input id="plate" placeholder="ሰሌዳ">
+            <input id="vType" placeholder="የተሽከርካሪ ዓይነት">
+            <input id="pDate" type="text" placeholder="ቀን (DD/MM/YYYY)">
+            <select id="loc">
+                <option value="">ቦታ ምረጥ</option>
+                <option>ሰቲት</option>
+                <option>ወልቃይት</option>
+                <option>ዳንሻ</option>
+                <option>ጠገዴ</option>
+                <option>ዞን</option>
+            </select>
+            <select id="status">
+                <option value="ችግር የለበትም">Pass</option>
+                <option value="ችግር ያለበት">Fail</option>
+            </select>
+            <input id="amt" type="number" placeholder="የክፍያ መጠን (ብር)">
+            <div style="display: flex; gap: 10px;">
+                <button id="saveBtn" onclick="save()" style="background:var(--primary); color:white; flex:1;"
+                    class="btn-action">
+                    <i class="fas fa-save"></i> Local
+                </button>
+                <button onclick="syncAllToCloud()" style="background:var(--success); color:white; flex:1;"
+                    class="btn-action">
+                    <i class="fas fa-cloud-upload-alt"></i> Cloud
+                </button>
+            </div>
         </div>
-        <div id="ocrResult" class="ocr-result"></div>
 
-        <button class="btn btn-primary" onclick="processPayment()"><i class="fas fa-check-circle"></i> ክፍያ ጨምር</button>
-        <button class="btn btn-warning" onclick="resetForm()"><i class="fas fa-undo"></i> ሪሴት</button>
-        <button class="btn btn-danger" onclick="logout()"><i class="fas fa-power-off"></i> ውጣ</button>
+        <!-- ሰንጠረዥ -->
+        <div class="card table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ተ.ቁ</th>
+                        <th>ደረሰኝ</th>
+                        <th>ሰሌዳ</th>
+                        <th>ዓይነት</th>
+                        <th>��ን</th>
+                        <th>ቦታ</th>
+                        <th>ምርመራ</th>
+                        <th>ብር</th>
+                        <th>እርምጃ</th>
+                    </tr>
+                </thead>
+                <tbody id="mainTable"></tbody>
+            </table>
+        </div>
+
+        <!-- ስታቲስቲክስ -->
+        <div class="grid-4">
+            <div class="stat-box"><span class="stat-lbl">ጠቅላላ ተሽከርካሪ</span><span id="uiCount" class="stat-val">0</span>
+            </div>
+            <div class="stat-box"><span class="stat-lbl">ጠቅላላ ገቢ (ብር)</span><span id="uiSum" class="stat-val">0</span>
+            </div>
+            <div class="stat-box"><span class="stat-lbl">ችግር የለለበት</span><span id="uiPassed" class="stat-val">0</span>
+            </div>
+            <div class="stat-box"><span class="stat-lbl">ችግር ያለበት</span><span id="uiFailed" class="stat-val">0</span>
+            </div>
+        </div>
+
+        <input type="file" id="xlFile" hidden onchange="importExcel(event)">
     </div>
 
-    <!-- ደረሰኝ ሞዳል -->
-    <div id="receiptModal" class="modal-overlay">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeReceiptModal()">&times;</span>
-            <div id="receiptCard" class="receipt-card show"></div>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
     <script>
-        // ==================== ቅድመ-የተጠቃሚ ውሂብ (werku/9999 ጨምሮ) ====================
-        const WERKU_HASH = "$2a$10$AqD6l3axR5bXXPV0.XvYQePYoXEB9qPdrY1IVfhTbVhZ/pvRfF.Wq";
-        const ADMIN_HASH = "$2a$10$DZqaGRB4HbLlJpC1.xvLdOMXpNuqO8QPRAtQGSBR1LCN8S9DkLhIa";
-        const USER123_HASH = "$2a$10$zfO0fk6BG0S0n0mFJYB1fuRj9oXeFrUGm19I8H6ZHdqGSp8MVqhuy";
-        function ensureUsers() {
-            let users = JSON.parse(localStorage.getItem('TECH_SYSTEM_USERS') || '[]');
-            const defaults = [
-                { name: 'admin', role: 'admin', location: '', passHash: ADMIN_HASH },
-                { name: 'user1', role: 'user', location: 'ሰቲት', passHash: USER123_HASH },
-                { name: 'user2', role: 'user', location: 'ወልቃይት', passHash: USER123_HASH },
-                { name: 'user3', role: 'user', location: 'ዳንሻ', passHash: USER123_HASH },
-                { name: 'user4', role: 'user', location: 'ጠገዴ', passHash: USER123_HASH },
-                { name: 'user5', role: 'user', location: 'ዞን', passHash: USER123_HASH },
-                { name: 'werku', role: 'user', location: 'ሰቲት', passHash: WERKU_HASH }
-            ];
-            defaults.forEach(def => { if (!users.find(u => u.name === def.name)) users.push(def); });
-            localStorage.setItem('TECH_SYSTEM_USERS', JSON.stringify(users));
-        }
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwzEJO_ilGL8sqFs4JqBhrc7ZyBq7LlRYaqurx0a4cp9UwntfVTr7CdM8ynn3O1gdbIAw/exec";
+        const DB_NAME = 'TECH_INSPECTION_DB';
+        let db, currentUser = null, allData = [];
 
-        // ==================== የኢትዮጵያ ቀን መቁጠሪያ ====================
-        const ethMonths = [
-            { name: "መስከረም", days: 30 }, { name: "ጥቅምት", days: 30 }, { name: "ኅዳር", days: 30 }, { name: "ታኅሣሥ", days: 30 },
-            { name: "ጥር", days: 30 }, { name: "የካቲት", days: 30 }, { name: "መጋቢት", days: 30 }, { name: "ሚያዝያ", days: 30 },
-            { name: "ግንቦት", days: 30 }, { name: "ሰኔ", days: 30 }, { name: "ሐምሌ", days: 30 }, { name: "ነሐሴ", days: 30 },
-            { name: "ጳጉሜን", days: 5 }
-        ];
-        function isEthLeapYear(y) { return (y % 4) === 3; }
-        function getEthMonthDays(mi, y) { return mi === 12 ? (isEthLeapYear(y) ? 6 : 5) : 30; }
-        function ethToJDN(d, m, y) { return 1724221 + 365 * (y - 1) + Math.floor(y / 4) + 30 * m + d - 31; }
-        function jdnToGreg(jdn) {
-            let l = jdn + 68569, n = Math.floor(4 * l / 146097); l -= Math.floor((146097 * n + 3) / 4);
-            let i = Math.floor(4000 * (l + 1) / 1461001); l = l - Math.floor(1461 * i / 4) + 31;
-            let j = Math.floor(80 * l / 2447), day = l - Math.floor(2447 * j / 80); l = Math.floor(j / 11);
-            return { year: 100 * (n - 49) + i + l, month: j + 2 - 12 * l, day };
-        }
-        function ethToGreg(d, m, y) { return jdnToGreg(ethToJDN(d, m, y)); }
-        function gregToEth(y, m, d) {
-            const jdn = Math.floor((y + Math.floor((m - 14) / 12)) * 365.25) + Math.floor(30.6001 * ((m % 12) + 1)) + d + 1720995;
-            const r = jdn - 1724221;
-            const n = Math.floor(r / 146097);
-            const rem = r % 146097;
-            const y_part = Math.floor(rem / 365.25);
-            const d_part = (rem % 365.25);
-            const year = n * 400 + y_part + 1;
-            const m_part = Math.floor(d_part / 30);
-            const day = Math.floor(d_part % 30) + 1;
-            return { year, month: m_part + 1, day };
-        }
-        function businessDaysFromEthDate(ethDateStr) {
-            const parts = ethDateStr.split('/'); if (parts.length !== 3) return 0;
-            const d = parseInt(parts[0]), m = parseInt(parts[1]), y = parseInt(parts[2]);
-            if (isNaN(d) || isNaN(m) || isNaN(y)) return 0;
-            const greg = ethToGreg(d, m, y);
-            const start = new Date(greg.year, greg.month - 1, greg.day);
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            let count = 0, cur = new Date(start);
-            cur.setDate(cur.getDate() + 1);
-            while (cur <= today) { const dow = cur.getDay(); if (dow !== 0 && dow !== 6) count++; cur.setDate(cur.getDate() + 1); }
-            return count;
-        }
+        // ============ ኢትዮጵያ ወራት ============
+        const ethiopianMonths = ["መስከረም", "ጥቅምት", "ኅዳር", "ታኅሣሥ", "ጥር", "የካቲት", "መጋቢት", "ሚያዝያ", "ግንቦት", "ሰኔ", "ሐምሌ", "ነሐሴ", "ጳጉሜን"];
 
-        // ==================== የተሽከርካሪ አይነት እና ክፍያ ====================
-        const vehicleFeeData = {
-            '2.3.1': { text: 'ሞተር/ባጃጅ', fees: [400, 600, 800] },
-            '2.3.2': { text: 'አነስተኛ (<=11 መቀመጫ)', fees: [600, 800, 1000] },
-            '2.3.3': { text: 'መለስተኛ (12-44)', fees: [800, 1000, 1200] },
-            '2.3.4': { text: 'ከፍተኛ (45+ መቀመጫ)', fees: [1000, 1200, 1500] },
-            '2.3.5': { text: 'ደረቅ 1 (<=35 ኩንታል)', fees: [800, 1000, 1200] },
-            '2.3.6': { text: 'ደረቅ 2 (36-70 ኩንታል)', fees: [1000, 1200, 2000] },
-            '2.3.7': { text: 'ደረቅ 3 (71-150 ኩንታል)', fees: [1000, 2500, 3500] },
-            '2.3.8': { text: 'ከባድ (>150 ኩንታል)', fees: [1500, 3000, 4000] },
-            '2.3.9': { text: 'ፈሳሽ (<=18000 ሊትር)', fees: [1000, 2500, 3500] }
-        };
-        function populateVehicleTypes() {
-            const sel = document.getElementById('vTypeSel');
-            sel.innerHTML = '';
-            for (const [key, val] of Object.entries(vehicleFeeData)) {
-                const opt = document.createElement('option'); opt.value = key; opt.textContent = val.text; sel.appendChild(opt);
+        // ============ ቀን ማስተካከያ ============
+        function normalizeDate(dateStr) {
+            if (!dateStr) return '';
+            let normalized = dateStr.trim();
+            if (normalized.includes('(')) normalized = normalized.split('(')[0].trim();
+            normalized = normalized.replace(/ዓ\.ም/g, '').replace(/\s+/g, '').trim();
+            const parts = normalized.split('/');
+            if (parts.length === 3) {
+                let day = parts[0].padStart(2, '0');
+                let month = parts[1].padStart(2, '0');
+                let year = parseInt(parts[2]) < 100 ? '20' + parts[2] : parts[2];
+                return `${day}/${month}/${year}`;
             }
-        }
-        function updateFee() {
-            const type = document.getElementById('vTypeSel').value;
-            const dateStr = document.getElementById('date').value.trim();
-            const feeInfo = document.getElementById('feeInfo');
-            if (!type || !dateStr) return;
-            const days = businessDaysFromEthDate(dateStr);
-            const fees = vehicleFeeData[type].fees;
-            let fee, range;
-            if (days <= 7) { fee = fees[0]; range = `0–7 የስራ ቀናት (${days} ቀን)`; }
-            else if (days <= 15) { fee = fees[1]; range = `8–15 የስራ ቀናት (${days} ቀን)`; }
-            else { fee = fees[2]; range = `ከ15 በላይ ቀናት (${days} ቀን)`; }
-            document.getElementById('amount').value = fee;
-            feeInfo.classList.add('show');
-            feeInfo.innerHTML = `📅 ${range} → ብር ${fee}`;
+            return normalized;
         }
 
-        // ==================== የመረጃ አያያዝ ====================
-        const DB_NAME = 'TECH_SYSTEM_DB';
-        const SHEET_URL = "https://script.google.com/macros/s/AKfycbwzEJO_ilGL8sqFs4JqBhrc7ZyBq7LlRYaqurx0a4cp9UwntfVTr7CdM8ynn3O1gdbIAw/exec";
-        let db, allRecords = [];
-
-        function showToast(msg, isGood = true) {
-            const t = document.getElementById('toast');
-            t.textContent = msg; t.style.background = isGood ? '#2e7d32' : '#d32f2f';
-            t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000);
+        function formatDisplayDate(dateStr) {
+            if (!dateStr) return '';
+            let normalized = normalizeDate(dateStr);
+            let parts = normalized.split('/');
+            if (parts.length !== 3) return dateStr;
+            let month = parseInt(parts[1], 10);
+            let monthName = ethiopianMonths[month - 1] || "";
+            return `${parts[0]}/${parts[1]}/${parts[2]} (${monthName})`;
         }
 
+        // ============ በースይ ============
         function openDB() {
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, 1);
                 req.onupgradeneeded = (e) => {
                     const d = e.target.result;
-                    if (!d.objectStoreNames.contains('main')) d.createObjectStore('main', { keyPath: 'id', autoIncrement: true });
-                    if (!d.objectStoreNames.contains('trash')) d.createObjectStore('trash', { keyPath: 'id', autoIncrement: true });
+                    if (!d.objectStoreNames.contains('records')) d.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
                 };
                 req.onsuccess = (e) => { db = e.target.result; resolve(); };
-                req.onerror = (e) => reject(e);
+                req.onerror = () => reject('DB Error');
             });
         }
-        async function loadRecords() {
-            if (!db) await openDB();
+
+        async function loadData() {
             return new Promise(resolve => {
-                const tx = db.transaction('main', 'readonly');
-                const store = tx.objectStore('main');
-                const get = store.getAll();
-                get.onsuccess = () => { allRecords = get.result || []; resolve(allRecords); };
+                const tx = db.transaction('records', 'readonly');
+                const store = tx.objectStore('records');
+                const req = store.getAll();
+                req.onsuccess = () => { allData = req.result || []; resolve(allData); };
             });
         }
-        function normalizePlate(p) { return (p || '').toString().trim().toUpperCase().replace(/-/g, '').replace(/\s/g, ''); }
-        function normalizeDate(d) { if (!d) return ''; return d.toString().trim().split('(')[0].replace(/\s/g, '').replace(/ዓ\.ም/g, ''); }
-        function findRecord(plate, date) {
-            const np = normalizePlate(plate), nd = normalizeDate(date);
-            return allRecords.find(r => normalizePlate(r.plate) === np && normalizeDate(r.date) === nd);
-        }
-        async function updateOrCreateRecord(plate, date, amount, location, status, vType) {
-            if (!db) await openDB(); await loadRecords();
-            const existing = findRecord(plate, date);
-            const tx = db.transaction('main', 'readwrite');
-            const store = tx.objectStore('main');
+
+        function saveData(record) {
             return new Promise((resolve, reject) => {
-                if (existing) {
-                    const old = parseFloat(existing.amount) || 0;
-                    existing.amount = old + amount;
-                    existing.location = location || existing.location;
-                    existing.status = status || existing.status;
-                    existing.vType = vType || existing.vType;
-                    store.put(existing);
-                } else {
-                    const rec = { plate, date: `${date} (ከክፍያ)`, amount, location, status, receipt: '', vType: vType || '' };
-                    store.add(rec);
-                }
-                tx.oncomplete = () => { localStorage.setItem('payment_updated', Date.now().toString()); resolve(true); };
-                tx.onerror = () => reject(false);
+                const tx = db.transaction('records', 'readwrite');
+                const store = tx.objectStore('records');
+                const req = store.add(record);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(false);
             });
         }
-        async function syncToCloud(entry) {
-            if (!navigator.onLine) return;
-            try { await fetch(SHEET_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operation: 'add', data: [entry] }) }); } catch (e) { }
+
+        // ============ ሰሌዳ + ቀን ላይ ተመስርተው አዘምን ============
+        async function updateByPlateAndDate(plate, date, amount, location, status, vType) {
+            plate = (plate || '').toUpperCase().replace(/\s/g, '').replace(/-/g, '');
+            date = normalizeDate(date);
+
+            const normalized = normalizeDate(date);
+            const existing = allData.find(r =>
+                (r.plate || '').toUpperCase().replace(/\s/g, '').replace(/-/g, '') === plate &&
+                normalizeDate(r.pDate) === normalized
+            );
+
+            if (existing) {
+                // ብር ብቻ ጨምር - ሌሎች መረጃ ሳይቀንስ
+                const oldAmount = parseFloat(existing.amt) || 0;
+                existing.amt = oldAmount + amount;
+
+                const tx = db.transaction('records', 'readwrite');
+                const store = tx.objectStore('records');
+                await new Promise(resolve => {
+                    store.put(existing);
+                    tx.oncomplete = () => resolve();
+                });
+            } else {
+                // አዲስ ተጠቃሚ
+                const newRecord = {
+                    receipt: parseInt(Math.random() * 100000),
+                    plate,
+                    vType: vType || '',
+                    pDate: date,
+                    loc: location || '',
+                    status: status || 'ችግር ያለበት',
+                    amt: amount
+                };
+                await saveData(newRecord);
+            }
+
+            await loadData();
+            refresh();
+            showToast('✅ ተኩስታል');
         }
 
-        // ==================== OCR ====================
-        let ocrAmount = null;
-        async function handleOCR(input) {
-            const file = input.files[0]; if (!file) return;
-            showToast('በመተንተን ላይ...');
-            document.getElementById('preview').src = URL.createObjectURL(file);
-            document.getElementById('preview').style.display = 'block';
-            try {
-                const { data: { text } } = await Tesseract.recognize(file, 'eng+amh');
-                const m = text.match(/Deposited\s+Amount\s*[:]?\s*(\d{3,5})/i) || text.match(/(\d{3,5})\s*(ብር|ETB)/i);
-                const card = document.getElementById('ocrResult');
-                if (m) {
-                    ocrAmount = parseInt(m[1]);
-                    card.className = 'ocr-result show success';
-                    card.innerHTML = `<div class="detected-amount">${ocrAmount} ብር</div><button class="btn btn-primary" onclick="useOcr()">ይህን ተጠቀም</button>`;
-                    showToast(`💰 ${ocrAmount} ብር ተገኝቷል`);
-                } else {
-                    card.className = 'ocr-result show error-box';
-                    card.innerHTML = `<p style="color:#d32f2f;">⚠️ መጠን አልተገኘም</p><input type="number" id="manualOcrAmt" placeholder="ብር" value="400"><button class="btn btn-primary" onclick="useManualOcr()">አስገባ</button>`;
-                    showToast('OCR ማንበብ አልቻለም', false);
-                }
-            } catch (e) { showToast('OCR ስህተት', false); }
-        }
-        function useOcr() { if (ocrAmount) { document.getElementById('amount').value = ocrAmount; showToast('✅ ብር ተቀናብሯል'); } }
-        function useManualOcr() {
-            const val = parseFloat(document.getElementById('manualOcrAmt')?.value);
-            if (val && val >= 50 && val <= 50000) { document.getElementById('amount').value = val; showToast('✅ ብር ተቀናብሯል'); }
-            else showToast('ትክክለኛ መጠን (50-50,000)', false);
-        }
-
-        // ==================== ክፍያ ሂደት ====================
-        async function processPayment() {
+        // ============ ግቤት ============
+        function save() {
+            const receipt = document.getElementById('receipt').value.trim();
             const plate = document.getElementById('plate').value.trim();
-            const date = document.getElementById('date').value.trim();
-            const amount = parseFloat(document.getElementById('amount').value);
+            const vType = document.getElementById('vType').value.trim();
+            const pDate = document.getElementById('pDate').value.trim();
+            const loc = document.getElementById('loc').value;
             const status = document.getElementById('status').value;
-            const location = document.getElementById('location').value;
-            const vType = document.getElementById('vTypeSel').value;
+            const amt = parseFloat(document.getElementById('amt').value);
 
-            if (!plate || !date || isNaN(amount) || amount < 50) { showToast('ሁሉንም ያስገቡ', false); return; }
-            if (!vType) { showToast('የተሽከርካሪ ዓይነት ይምረጡ', false); return; }
-            if (status !== "ችግር ያለበት") { showToast('Pass አይከፈልም', false); return; }
+            if (!plate || !pDate || !amt) {
+                showToast('ሰሌዳ, ቀን, ብር ያስገቡ', false);
+                return;
+            }
 
-            await loadRecords();
-            const existing = findRecord(plate, date);
-            const oldAmount = existing ? parseFloat(existing.amount) || 0 : 0;
-            const newTotal = oldAmount + amount;
-            if (!confirm(`ሰሌዳ: ${plate}\nቀን: ${date}\nቀድሞ: ${oldAmount} ብር\nአዲስ: ${amount} ብር\nጠቅላላ: ${newTotal} ብር\n\nእርግጠኛ ኖት?`)) return;
+            // ሰሌዳ + ቀን ሰርች
+            plate_normalized = (plate || '').toUpperCase().replace(/\s/g, '').replace(/-/g, '');
+            date_normalized = normalizeDate(pDate);
+            const oldAmount = allData.filter(r =>
+                (r.plate || '').toUpperCase().replace(/\s/g, '').replace(/-/g, '') === plate_normalized &&
+                normalizeDate(r.pDate) === date_normalized
+            ).reduce((sum, r) => sum + (parseFloat(r.amt) || 0), 0);
 
-            try {
-                await updateOrCreateRecord(plate, date, amount, location, status, vType);
-                showToast('✅ ክፍያ ተመዝግቧል');
-                await loadRecords();
-                const saved = findRecord(plate, date);
-                if (saved) syncToCloud(saved).then(() => showToast('☁️ ወደ ጎግል ሺት ተልኳል')).catch(() => { });
-                
-                // ደረሰኝ በሞዳል ውስጥ ያሳይ - ወደ form ሳይምለስ
-                showReceiptModal({ plate, date, amount, location, vType: vehicleFeeData[vType].text, total: newTotal });
-            } catch (e) { showToast('ስህተት ተከስቷል', false); }
+            const newTotal = oldAmount + amt;
+            const msg = `ሰሌዳ: ${plate}\nቀን: ${pDate}\nቀድሞ: ${oldAmount} ብር\nአዲስ: ${amt} ብር\nጠቅላላ: ${newTotal} ብር\n\nእርግጠኛ?`;
+
+            if (!confirm(msg)) return;
+
+            updateByPlateAndDate(plate, pDate, amt, loc, status, vType);
         }
 
-        // ==================== ደረሰኝ ሞዳል ====================
-        function showReceiptModal(payment) {
-            const card = document.getElementById('receiptCard');
-            const todayEth = gregToEth(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
-            const receiptDate = `${todayEth.day}/${todayEth.month}/${todayEth.year}`;
-            const html = `
-        <h4>🧾 የክፍያ ደረሰኝ</h4>
-        <table>
-          <tr><td>ሰሌዳ</td><td><strong>${payment.plate}</strong></td></tr>
-          <tr><td>የምርመራ ቀን</td><td>${payment.date}</td></tr>
-          <tr><td>የተሽከርካሪ ዓይነት</td><td>${payment.vType}</td></tr>
-          <tr><td>ቦታ</td><td>${payment.location}</td></tr>
-          <tr><td>የተከፈለ ብር</td><td style="color:#2e7d32;font-weight:900;font-size:1.2em;">${payment.amount} ብር</td></tr>
-          <tr><td>አጠቃላይ ክፍያ (ድምር)</td><td>${payment.total} ብር</td></tr>
-          <tr><td>የደረሰኝ ቀን</td><td>${receiptDate}</td></tr>
-        </table>
-        <div class="share-btns">
-          <button class="btn btn-primary" onclick="shareToWhatsApp('${payment.plate}','${payment.amount}')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-          <button class="btn btn-primary" onclick="shareToTelegram('${payment.plate}','${payment.amount}')"><i class="fab fa-telegram-plane"></i> Telegram</button>
-          <button class="btn btn-warning" onclick="shareViaSMS('${payment.plate}','${payment.amount}')"><i class="fas fa-sms"></i> SMS</button>
-          <button class="btn" style="background:#0288d1;" onclick="printReceipt()"><i class="fas fa-print"></i> አትም</button>
-          <button class="btn" style="background:#4caf50;" onclick="downloadPDF('${payment.plate}','${payment.date}','${payment.vType}','${payment.location}','${payment.amount}','${payment.total}','${receiptDate}')"><i class="fas fa-file-pdf"></i> PDF</button>
-          <button class="btn" style="background:#ff9800;" onclick="downloadExcel('${payment.plate}','${payment.date}','${payment.vType}','${payment.location}','${payment.amount}','${payment.total}','${receiptDate}')"><i class="fas fa-file-excel"></i> Excel</button>
-        </div>
-        <div style="margin-top:15px;">
-          <input type="text" id="phoneNumber" placeholder="ስልክ ቁጥር (ከሀገር ኮድ ጋር)" style="width:70%; display:inline;">
-          <button class="btn btn-primary" style="width:28%; display:inline;" onclick="sendToPhone()"><i class="fas fa-paper-plane"></i> ላክ</button>
-        </div>
-      `;
-            card.innerHTML = html;
-            document.getElementById('receiptModal').classList.add('show');
+        // ============ ዝመና ============
+        async function refresh() {
+            await loadData();
+            let filtered = allData;
+
+            const sPlate = document.getElementById('sPlate').value.trim().toUpperCase();
+            const sReceipt = document.getElementById('sReceipt').value.trim();
+            const sLoc = document.getElementById('sLoc').value;
+            const sStatus = document.getElementById('sStatus').value;
+
+            if (sPlate) filtered = filtered.filter(r => (r.plate || '').toUpperCase().includes(sPlate));
+            if (sReceipt) filtered = filtered.filter(r => String(r.receipt).includes(sReceipt));
+            if (sLoc) filtered = filtered.filter(r => r.loc === sLoc);
+            if (sStatus) filtered = filtered.filter(r => r.status === sStatus);
+
+            // ሠንጠረዥ
+            const table = document.getElementById('mainTable');
+            table.innerHTML = '';
+            filtered.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td>${row.receipt}</td>
+                    <td>${row.plate}</td>
+                    <td>${row.vType}</td>
+                    <td>${formatDisplayDate(row.pDate)}</td>
+                    <td>${row.loc}</td>
+                    <td>${row.status}</td>
+                    <td>${row.amt}</td>
+                    <td><button onclick="deleteRecord(${row.id})" style="background:red; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">ሰርዝ</button></td>
+                `;
+                table.appendChild(tr);
+            });
+
+            // ስታቲስቲክስ
+            const totalCount = filtered.length;
+            const totalAmount = filtered.reduce((sum, r) => sum + (parseFloat(r.amt) || 0), 0);
+            const passCount = filtered.filter(r => r.status === 'ችግር የለበትም').length;
+            const failCount = filtered.filter(r => r.status === 'ችግር ያለበት').length;
+
+            document.getElementById('uiCount').textContent = totalCount;
+            document.getElementById('uiSum').textContent = totalAmount.toLocaleString();
+            document.getElementById('uiPassed').textContent = passCount;
+            document.getElementById('uiFailed').textContent = failCount;
         }
 
-        function closeReceiptModal() {
-            document.getElementById('receiptModal').classList.remove('show');
+        function deleteRecord(id) {
+            if (!confirm('ይህን ሰርዛል?')) return;
+            const tx = db.transaction('records', 'readwrite');
+            const store = tx.objectStore('records');
+            store.delete(id);
+            tx.oncomplete = () => {
+                showToast('✅ ተሰርዧል');
+                refresh();
+            };
         }
 
-        // ==================== ሼር ተግባራት ====================
-        function shareToWhatsApp(plate, amount) {
-            const msg = `✅ ለተሽከርካሪ ${plate} ክፍያ ተከፍሏል።\nብር ${amount}`;
-            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-        function shareToTelegram(plate, amount) {
-            const msg = `✅ ለተሽከርካሪ ${plate} ክፍያ ተከፍሏል።\nብር ${amount}`;
-            window.open(`https://t.me/share/url?url=&text=${encodeURIComponent(msg)}`, '_blank');
-        }
-        function shareViaSMS(plate, amount) {
-            const msg = `✅ ለተሽከርካሪ ${plate} ክፍያ ${amount} ብር ተከፍሏል።`;
-            window.open(`sms:?body=${encodeURIComponent(msg)}`, '_self');
-        }
-        function sendToPhone() {
-            const phone = document.getElementById('phoneNumber').value.trim();
-            if (!phone) { showToast('ስልክ ቁጥር ያስገቡ', false); return; }
-            const plate = document.getElementById('plate').value.trim();
-            const amount = document.getElementById('amount').value;
-            const msg = `✅ ለተሽከርካሪ ${plate} ክፍያ ${amount} ብር ተከፍሏል።`;
-            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        // ==================== ፕሪንት / ፒዲኤፍ / ኤክሴል ====================
-        function printReceipt() {
-            const card = document.getElementById('receiptCard').cloneNode(true);
-            const btnRow = card.querySelector('.share-btns');
-            if (btnRow) btnRow.remove();
-            const phoneDiv = card.querySelector('div:last-child');
-            if (phoneDiv) phoneDiv.remove();
-            const win = window.open('', '_blank', 'width=600,height=600');
-            win.document.write('<html><head><title>ደረሰኝ</title><style>body{font-family: Nyala, sans-serif; padding:20px;}</style></head><body>');
-            win.document.write(card.outerHTML);
-            win.document.write('</body></html>');
-            win.document.close();
-            win.print();
-        }
-
-        async function downloadPDF(plate, date, vType, loc, amount, total, receiptDate) {
-            const receiptDiv = document.getElementById('receiptCard');
-            const canvas = await html2canvas(receiptDiv, { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 190;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-            pdf.save(`Receipt_${plate}_${date}.pdf`);
-        }
-
-        function downloadExcel(plate, date, vType, loc, amount, total, receiptDate) {
-            const wb = XLSX.utils.book_new();
-            const wsData = [
-                ['የተሽከርካሪ ሰሌዳ', plate],
-                ['የምርመራ ቀን', date],
-                ['የተሽከርካሪ ዓይነት', vType],
-                ['ቦታ', loc],
-                ['የተከፈለ ብር', amount],
-                ['አጠቃላይ ክፍያ', total],
-                ['የደረሰኝ ቀን', receiptDate]
-            ];
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            XLSX.utils.book_append_sheet(wb, ws, 'Receipt');
-            XLSX.writeFile(wb, `Receipt_${plate}.xlsx`);
-        }
-
-        // ==================== ቀሪ ተግባራት ====================
-        function resetForm() {
-            document.getElementById('plate').value = '';
-            document.getElementById('date').value = '';
-            document.getElementById('amount').value = '400';
-            document.getElementById('status').value = 'ችግር ያለበት';
-            document.getElementById('location').value = 'ሰቲት';
-            document.getElementById('preview').style.display = 'none';
-            document.getElementById('ocrResult').className = 'ocr-result';
-            document.getElementById('feeInfo').classList.remove('show');
-            closeReceiptModal();
-            ocrAmount = null;
-        }
-
+        // ============ ሎግይን ============
         function login() {
-            const name = document.getElementById('username').value.trim().toLowerCase();
-            const pass = document.getElementById('password').value;
-            const users = JSON.parse(localStorage.getItem('TECH_SYSTEM_USERS') || '[]');
-            const user = users.find(u => u.name === name);
-            if (!user) { showToast('ተጠቃሚ አልተገኘም', false); return; }
-            let isValid = false;
-            try { if (typeof bcrypt !== 'undefined' && bcrypt.compareSync) isValid = bcrypt.compareSync(pass, user.passHash); else isValid = (pass === user.passHash); }
-            catch (e) { isValid = (pass === user.passHash); }
-            if (isValid) {
-                sessionStorage.setItem('payLogged', '1');
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('appScreen').classList.remove('hidden');
-                if (user.location) document.getElementById('location').value = user.location;
-                showToast('እንኳን ደህና መጡ');
-            } else showToast('የይለፍ ቃል ትክክል አይደለም', false);
+            const u = document.getElementById('u').value.trim().toLowerCase();
+            const p = document.getElementById('p').value;
+
+            // ንቁ ተጠቃሚዎች
+            const users = {
+                'admin': 'admin123',
+                'user1': 'user123',
+                'user2': 'user123',
+                'werku': '9999'
+            };
+
+            if (users[u] === p) {
+                currentUser = u;
+                sessionStorage.setItem('inspectUser', u);
+                document.getElementById('loginArea').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userBadge').textContent = `👤 ${u.toUpperCase()}`;
+                refresh();
+                showToast('እንኳን ደህና መጡ!');
+            } else {
+                showToast('ስህተት ኃላፊ ወይም ይለፍ ቃል', false);
+            }
         }
 
         function logout() {
-            sessionStorage.removeItem('payLogged');
-            document.getElementById('appScreen').classList.add('hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            closeReceiptModal();
+            sessionStorage.removeItem('inspectUser');
+            location.reload();
         }
 
+        function showToast(msg, isGood = true) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.background = isGood ? '#2e7d32' : '#d32f2f';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function togglePasswordVisibility() {
+            const inp = document.getElementById('p');
+            const icon = document.getElementById('pwToggleIcon');
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                inp.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function toggleLang(lang) {
+            // ለወደፊት ተግባር
+        }
+
+        async function syncAllToCloud() {
+            showToast('ወደ ክላውድ እንደገና...');
+            try {
+                const response = await fetch(GOOGLE_SHEET_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ operation: 'add', data: allData })
+                });
+                showToast('☁️ ወደ ክላውድ ተልኳል!');
+            } catch (e) {
+                showToast('ክላውድ ስህተት', false);
+            }
+        }
+
+        function exportExcel() {
+            const ws = XLSX.utils.json_to_sheet(allData.map(r => ({
+                'ተ.ቁ': r.id,
+                'ደረሰኝ': r.receipt,
+                'ሰሌዳ': r.plate,
+                'ዓይነት': r.vType,
+                'ቀን': r.pDate,
+                'ቦታ': r.loc,
+                'ምርመራ': r.status,
+                'ብር': r.amt
+            })));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'ውሂብ');
+            XLSX.writeFile(wb, 'ጋራ_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            showToast('✅ ኤክሴል አውርድ ተጠናቅቀ');
+        }
+
+        function localBackup() {
+            const data = JSON.stringify(allData);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'backup_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            showToast('✅ ባካፕ ተከናወነ');
+        }
+
+        // ============ መጀመር ============
         (async () => {
-            ensureUsers();
             await openDB();
-            await loadRecords();
-            populateVehicleTypes();
-            if (sessionStorage.getItem('payLogged') === '1') {
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('appScreen').classList.remove('hidden');
+            if (sessionStorage.getItem('inspectUser')) {
+                currentUser = sessionStorage.getItem('inspectUser');
+                document.getElementById('loginArea').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userBadge').textContent = `👤 ${currentUser.toUpperCase()}`;
+                await refresh();
             }
         })();
 
-        // የPWA Service Worker ምዝገባ
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/-76/sw.js');
-        }
+        // ============ አውታረ መረብ ፍለጋ ============
+        window.addEventListener('online', () => {
+            document.getElementById('netStatus').className = 'status-indicator online';
+            document.getElementById('netText').textContent = 'ኦንላይን';
+        });
+        window.addEventListener('offline', () => {
+            document.getElementById('netStatus').className = 'status-indicator offline';
+            document.getElementById('netText').textContent = 'ኦፍላይን';
+        });
     </script>
 </body>
 
