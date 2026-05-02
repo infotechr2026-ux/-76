@@ -11,7 +11,7 @@
     <meta name="description" content="System 76 - የተሽከርካሪ ክፍያ ማስገቢያ ሲስተም">
     <title>System 76 - ክፍያ ማስገቢያ</title>
 
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="payment-manifest.json">
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23004d40'/><text x='50' y='68' text-anchor='middle' font-size='55' fill='white'>🚗</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -729,6 +729,30 @@
                 w.print();   // ንፁህ የማተሚያ ጥሪ
             };
 
+
+            
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // "አፕ ጫን" የሚል ቁልፍ አሳይ
+                const installBtn = document.createElement('button');
+                installBtn.textContent = '📲 አፕ ጫን';
+                installBtn.className = 'btn btn-pay';
+                installBtn.style.marginTop = '5px';
+                installBtn.onclick = () => {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => {
+                        deferredPrompt = null;
+                        installBtn.remove();
+                    });
+                };
+                document.body.appendChild(installBtn);
+            });
+
+
+            
+            
             openDB().then(() => console.log('✅ ከዋና ሲስተም (IndexedDB) ጋር ተገናኝቷል'))
                 .catch(e => console.error('ዳታቤዝ መክፈት አልተሳካም', e));
             console.log('🚗 System 76 ዝግጁ ነው - GitHub ላይ ለመጠቀም ዝግጁ');
