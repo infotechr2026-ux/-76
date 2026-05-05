@@ -210,6 +210,12 @@
             gap: 8px;
         }
 
+        .alert-box.info {
+            background: #e3f2fd;
+            border-left-color: #1565c0;
+            color: #0d47a1;
+        }
+
         .btn {
             width: 100%;
             padding: 15px;
@@ -236,6 +242,12 @@
             background: linear-gradient(135deg, #2e7d32, #43a047);
             box-shadow: 0 5px 18px rgba(46, 125, 50, 0.3);
             font-size: 1.15rem;
+        }
+
+        .btn-pay:disabled {
+            background: #9e9e9e;
+            box-shadow: none;
+            cursor: not-allowed;
         }
 
         .btn-reset {
@@ -344,6 +356,10 @@
             background: #c62828;
         }
 
+        .toast.info {
+            background: #1565c0;
+        }
+
         .hint-text {
             font-size: 0.75rem;
             color: #888;
@@ -377,7 +393,7 @@
             text-decoration: underline;
         }
 
-        @media (max-width: 400px) {
+        @media (max-width:400px) {
             .card {
                 padding: 20px 16px;
             }
@@ -440,27 +456,27 @@
         </div>
         <div class="form-group">
             <label><i class="fas fa-clipboard-check"></i> የምርመራ ውጤት</label>
-            <input type="text" value="ችግር ያለበት (Fail)" readonly>
+            <input type="text" id="inspectionResult" value="ሰሌዳ እና ቀን ያስገቡ" readonly>
         </div>
-        <div class="alert-box">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span>Fail ለሆኑ ብቻ ክፍያ ይከፈላል</span>
+        <div class="alert-box" id="alertBox">
+            <i class="fas fa-exclamation-triangle" id="alertIcon"></i>
+            <span id="alertText">Fail ለሆኑ ብቻ ክፍያ ይከፈላል</span>
         </div>
         <hr>
-        <div class="form-group">
-            <label><i class="fas fa-calculator"></i> 💰 ራስ-ሰር የተሰላ ክፍያ</label>
-            <div class="amount-box" id="calculatedAmount">--</div>
-            <div class="fee-detail" id="feeBreakdown"></div>
+        <div id="paymentSection">
+            <div class="form-group">
+                <label><i class="fas fa-calculator"></i> 💰 ራስ-ሰር የተሰላ ክፍያ</label>
+                <div class="amount-box" id="calculatedAmount">--</div>
+                <div class="fee-detail" id="feeBreakdown"></div>
+            </div>
+            <button class="btn btn-pay" id="payButton" onclick="processPayment()">
+                <i class="fas fa-check-circle"></i> ክፍያ አስገባ
+            </button>
         </div>
-
-        <button class="btn btn-pay" onclick="processPayment()">
-            <i class="fas fa-check-circle"></i> ክፍያ አስገባ
-        </button>
         <button class="btn btn-reset" onclick="resetForm()">
             <i class="fas fa-redo-alt"></i> አዲስ ክፍያ
         </button>
 
-        <!-- ወደ ዋና ሲስተም መመለሻ ሊንክ -->
         <a href="./index.html" class="back-link">
             <i class="fas fa-arrow-left"></i> ወደ ዋና ሲስተም ተመለስ
         </a>
@@ -493,7 +509,7 @@
         (function () {
             'use strict';
 
-            // ========== የኢትዮጵያ ቀን መቁጠሪያ ==========
+            // ========== ኢትዮጵያ ቀን ==========
             const EthCal = {
                 toJDN: (d, m, y) => 1724221 + 365 * (y - 1) + Math.floor(y / 4) + 30 * m + d - 31,
                 jdnToGreg: jdn => {
@@ -530,7 +546,7 @@
                 }
             };
 
-            // ========== የክፍያ ሰንጠረዥ ==========
+            // ========== ክፍያ ሰንጠረዥ ==========
             const Fees = {
                 '2.3.1': { name: 'ሞተር/ባጃጅ', rates: [400, 600, 800] },
                 '2.3.2': { name: 'አነስተኛ', rates: [600, 800, 1000] },
@@ -543,7 +559,7 @@
                 '2.3.9': { name: 'ፈሳሽ', rates: [1000, 2500, 3500] }
             };
 
-            // ========== ከዋና ሲስተም IndexedDB ጋር ግንኙነት ==========
+            // ========== IndexedDB ==========
             const DB_NAME = 'TECH_SYSTEM_DB', DB_VERSION = 1;
             let db = null;
 
@@ -586,7 +602,45 @@
 
             const normPlate = s => (s || '').toString().trim().toUpperCase().replace(/[- ]/g, '');
 
-            // ✅ የሚዘመነው የክፍያ መጠን ብቻ ነው (ተሽከርካሪውን አይለውጥም)
+            // ✅ ተስተካክሏል፡ “ችግር የለበትም” እንደ Pass በትክክል ይታወቃል
+            function extractInspectionResult(record) {
+                if (!record) return null;
+                // ቅድሚያ የምንሰጣቸው የመስክ ስሞች
+                const searchKeys = ['result', 'inspection', 'status', 'test_result', 'inspection_result', 'outcome'];
+                for (const key of searchKeys) {
+                    const val = record[key];
+                    if (val && typeof val === 'string') {
+                        // Pass ወይም ችግር የለበትም
+                        if (/pass|ችግር\s*የለበትም|አልተገኘም/i.test(val)) return 'pass';
+                        // Fail ወይም ችግር ያለበት
+                        if (/fail|ችግር\s*ያለበት/i.test(val)) return 'fail';
+                    }
+                }
+                // በማንኛውም የሪከርድ እሴት ፈልግ
+                for (const val of Object.values(record)) {
+                    if (typeof val === 'string') {
+                        if (/pass|ችግር\s*የለበትም|አልተገኘም/i.test(val)) return 'pass';
+                        if (/fail|ችግር\s*ያለበት/i.test(val)) return 'fail';
+                    }
+                }
+                return null;
+            }
+
+            function findVehicleRecord(plate, date) {
+                if (!db) return Promise.reject(new Error('DB not open'));
+                return new Promise((res, rej) => {
+                    const tx = db.transaction('main', 'readonly'), store = tx.objectStore('main');
+                    const getAllReq = store.getAll();
+                    getAllReq.onsuccess = e => {
+                        const all = e.target.result || [];
+                        const np = normPlate(plate), nd = normalizeDate(date);
+                        const match = all.find(r => normPlate(r.plate) === np && normalizeDate(r.date) === nd);
+                        res(match || null);
+                    };
+                    getAllReq.onerror = e => rej(e);
+                });
+            }
+
             function findAndUpdatePayment(plate, date, amtToAdd) {
                 if (!db) return Promise.reject(new Error('DB not open'));
                 return new Promise((res, rej) => {
@@ -597,8 +651,13 @@
                         const np = normPlate(plate), nd = normalizeDate(date);
                         const match = all.find(r => normPlate(r.plate) === np && normalizeDate(r.date) === nd);
                         if (!match) return res({ success: false });
+
+                        const inspResult = extractInspectionResult(match);
+                        if (inspResult !== 'fail') {
+                            return res({ success: false, reason: 'no_problem', result: inspResult || 'unknown' });
+                        }
+
                         const prev = parseFloat(match.amount) || 0;
-                        // ክፍያውን ብቻ ጨምር፤ ሌላ መረጃ አትቀይር
                         match.amount = prev + amtToAdd;
                         const putReq = store.put(match);
                         putReq.onsuccess = () => res({ success: true, previousAmount: prev, newTotal: parseFloat(match.amount) });
@@ -613,8 +672,11 @@
             const plateEl = $('plateInput'), dateEl = $('dateInput'), typeEl = $('vehicleType'), locEl = $('locationSelect');
             const amtBox = $('calculatedAmount'), feeInfo = $('feeBreakdown');
             const receipt = $('receiptCard'), receiptBody = $('receiptContent'), toastEl = $('toast');
+            const inspectionResultEl = $('inspectionResult'), alertBoxEl = $('alertBox'), alertTextEl = $('alertText'), alertIconEl = $('alertIcon');
+            const paymentSection = $('paymentSection'), payButton = $('payButton');
 
             let toastTimer, currentFee = null, lastReceipt = null;
+            let currentVehicleIsFail = false;
 
             function toast(msg, cls) {
                 toastEl.textContent = msg;
@@ -623,11 +685,84 @@
                 toastTimer = setTimeout(() => toastEl.classList.remove('visible'), 2800);
             }
 
+            function setPaymentEnabled(enabled) {
+                if (enabled) {
+                    paymentSection.style.opacity = '1';
+                    paymentSection.style.pointerEvents = 'auto';
+                    payButton.disabled = false;
+                    payButton.textContent = '✔️ ክፍያ አስገባ';
+                } else {
+                    paymentSection.style.opacity = '0.4';
+                    paymentSection.style.pointerEvents = 'none';
+                    payButton.disabled = true;
+                    payButton.textContent = '⛔ ክፍያ አይቻልም';
+                    amtBox.textContent = '--';
+                    feeInfo.classList.remove('visible');
+                    currentFee = null;
+                }
+            }
+
+            async function updateInspectionResult() {
+                const plate = plateEl.value.trim(), date = dateEl.value.trim();
+                if (!plate || !date) {
+                    inspectionResultEl.value = 'ሰሌዳ እና ቀን ያስገቡ';
+                    setPaymentEnabled(false);
+                    alertTextEl.textContent = 'Fail ለሆኑ ብቻ ክፍያ ይከፈላል';
+                    alertBoxEl.className = 'alert-box';
+                    alertIconEl.className = 'fas fa-exclamation-triangle';
+                    currentVehicleIsFail = false;
+                    return;
+                }
+                try {
+                    if (!db) await openDB();
+                    const record = await findVehicleRecord(plate, date);
+                    if (!record) {
+                        inspectionResultEl.value = 'መረጃ አልተገኘም';
+                        setPaymentEnabled(false);
+                        alertTextEl.textContent = 'መረጃ አልተገኘም – እባክዎ በዋናው ሲስተም ያረጋግጡ';
+                        alertBoxEl.className = 'alert-box';
+                        alertIconEl.className = 'fas fa-exclamation-triangle';
+                        currentVehicleIsFail = false;
+                        return;
+                    }
+
+                    const inspResult = extractInspectionResult(record);
+                    const isFail = inspResult === 'fail';
+                    currentVehicleIsFail = isFail;
+
+                    if (isFail) {
+                        inspectionResultEl.value = 'ችግር ያለበት (Fail)';
+                        setPaymentEnabled(true);
+                        alertTextEl.innerHTML = 'Fail – ክፍያ መክፈል ይቻላል';
+                        alertBoxEl.className = 'alert-box';
+                        alertIconEl.className = 'fas fa-exclamation-triangle';
+                        calcFee();
+                    } else if (inspResult === 'pass') {
+                        inspectionResultEl.value = 'Pass (ችግር የለበትም)';
+                        setPaymentEnabled(false);
+                        alertTextEl.innerHTML = '✅ ተሽከርካሪው **ችግር የለበትም** – ክፍያ አያስፈልገውም';
+                        alertBoxEl.className = 'alert-box info';
+                        alertIconEl.className = 'fas fa-check-circle';
+                    } else {
+                        inspectionResultEl.value = 'ያልታወቀ ውጤት';
+                        setPaymentEnabled(false);
+                        alertTextEl.textContent = 'የምርመራ ውጤቱ አልተገኘም ወይም አልታወቀም';
+                        alertBoxEl.className = 'alert-box';
+                        alertIconEl.className = 'fas fa-question-circle';
+                    }
+                } catch (e) {
+                    console.error(e);
+                    inspectionResultEl.value = 'ስህተት';
+                    setPaymentEnabled(false);
+                }
+            }
+
             function calcFee() {
+                if (!currentVehicleIsFail) return;
                 const v = typeEl.value, d = dateEl.value.trim();
-                if (!v || !d) { amtBox.textContent = '--'; amtBox.classList.remove('highlight'); feeInfo.classList.remove('visible'); currentFee = null; return; }
+                if (!v || !d) { amtBox.textContent = '--'; feeInfo.classList.remove('visible'); currentFee = null; return; }
                 const days = EthCal.workingDays(d);
-                if (days < 0) { amtBox.textContent = 'ቀን አልተገኘም'; amtBox.classList.remove('highlight'); feeInfo.classList.remove('visible'); currentFee = null; return; }
+                if (days < 0) { amtBox.textContent = 'ቀን አልተገኘም'; feeInfo.classList.remove('visible'); currentFee = null; return; }
                 const f = Fees[v]; if (!f) { currentFee = null; return; }
                 let amount, range;
                 if (days <= 7) { amount = f.rates[0]; range = '0-7 ቀናት'; }
@@ -641,23 +776,32 @@
             }
 
             typeEl.addEventListener('change', calcFee);
-            dateEl.addEventListener('input', calcFee);
+            dateEl.addEventListener('input', () => { updateInspectionResult(); calcFee(); });
+            plateEl.addEventListener('input', updateInspectionResult);
+            dateEl.addEventListener('input', updateInspectionResult);
 
             window.processPayment = async function () {
+                if (!currentVehicleIsFail) {
+                    toast('ተሽከርካሪው ችግር የለበትም፣ ክፍያ አይከፈልም', 'info');
+                    return;
+                }
                 const plate = plateEl.value.trim(), date = dateEl.value.trim();
                 const vType = typeEl.value, loc = locEl.value;
-                if (!plate) { toast('ሰሌዳ ያስገቡ', 'error'); plateEl.focus(); return; }
-                if (!date) { toast('ቀን ያስገቡ', 'error'); dateEl.focus(); return; }
-                if (!vType) { toast('ዓይነት ይምረጡ', 'error'); typeEl.focus(); return; }
-                if (!currentFee) { toast('ቀንና ዓይነት ያረጋግጡ', 'error'); return; }
-
+                if (!plate || !date || !vType || !currentFee) {
+                    toast('እባክዎ ሁሉንም መረጃ ያስገቡ', 'error');
+                    return;
+                }
                 const vName = Fees[vType]?.name || vType;
                 try {
                     if (!db) await openDB();
-                    // ⚠️ ለማስላት ብቻ እንጂ ወደ ዳታቤዝ አይፃፍም
                     const result = await findAndUpdatePayment(plate, date, currentFee);
                     if (!result.success) {
-                        toast('መረጃው በሲስተሙ ውስጥ የለም፤ እባክዎ የተሽከርካሪውን ሙሉ መረጃ ያስገቡ', 'error');
+                        if (result.reason === 'no_problem') {
+                            toast('ተሽከርካሪው ችግር የለበትም፣ ክፍያ አይከፈልም', 'info');
+                            updateInspectionResult();
+                            return;
+                        }
+                        toast('መረጃው በሲስተሙ ውስጥ የለም', 'error');
                         return;
                     }
                     const prev = result.previousAmount, newTotal = result.newTotal;
@@ -690,6 +834,11 @@
                 amtBox.textContent = '--'; amtBox.classList.remove('highlight');
                 feeInfo.classList.remove('visible'); receipt.classList.remove('show');
                 currentFee = null; lastReceipt = null;
+                inspectionResultEl.value = 'ሰሌዳ እና ቀን ያስገቡ';
+                alertTextEl.textContent = 'Fail ለሆኑ ብቻ ክፍያ ይከፈላል';
+                alertBoxEl.className = 'alert-box';
+                alertIconEl.className = 'fas fa-exclamation-triangle';
+                setPaymentEnabled(false);
                 plateEl.focus();
             };
 
@@ -705,7 +854,6 @@
                 window.open(`https://t.me/share/url?url=&text=${encodeURIComponent(msg)}`, '_blank');
             };
 
-            // ✅ ማተሚያው ያለ ምንም ስህተት ይሰራል
             window.printReceipt = function () {
                 if (!lastReceipt) return;
                 const w = window.open('', '_blank', 'width=450,height=550');
@@ -726,12 +874,31 @@
                 </body></html>`);
                 w.document.close();
                 w.focus();
-                w.print();   // ንፁህ የማተሚያ ጥሪ
+                w.print();
             };
 
-            openDB().then(() => console.log('✅ ከዋና ሲስተም (IndexedDB) ጋር ተገናኝቷል'))
-                .catch(e => console.error('ዳታቤዝ መክፈት አልተሳካም', e));
-            console.log('🚗 System 76 ዝግጁ ነው - GitHub ላይ ለመጠቀም ዝግጁ');
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                const installBtn = document.createElement('button');
+                installBtn.textContent = '📲 አፕ ጫን';
+                installBtn.className = 'btn btn-pay';
+                installBtn.style.marginTop = '5px';
+                installBtn.onclick = () => {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => {
+                        deferredPrompt = null;
+                        installBtn.remove();
+                    });
+                };
+                document.body.appendChild(installBtn);
+            });
+
+            openDB().then(() => {
+                console.log('✅ IndexedDB ተገናኝቷል');
+                updateInspectionResult();
+            }).catch(e => console.error('ዳታቤዝ መክፈት አልተሳካም', e));
         })();
     </script>
 </body>
